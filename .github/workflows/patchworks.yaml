@@ -1,0 +1,166 @@
+name: Patchwork
+
+on:
+  push:
+    branches:
+      - main
+  # schedule:
+  #   # Run every 15 minutes offset by 7 to try to avoid github's high-load times
+  #   # https://stackoverflow.com/questions/59560214/github-action-works-on-push-but-not-scheduled
+  #   - cron: 7,22,37,52 * * * *
+  # pull_request:
+  #   branches:
+  #     - main
+  workflow_dispatch:
+    branches:
+      - main
+    inputs:
+      timestamp:
+        description: 'Patch Timestamp (UTC)'
+        required: true
+  #     baseline_gcc_hash:
+  #       description: 'Baseline hash'
+  #       required: false
+  #     tip_of_tree_hash:
+  #       description: 'Trunk hash'
+  #       required: false
+  #     patch_id:
+  #       description: 'Patch id (patch series not supported)'
+  #       required: false
+
+jobs:
+  init-submodules:
+    runs-on: ubuntu-20.04
+    steps:
+      # - name: Setup env
+      #   uses: ./.github/actions/common/setup-env
+      #   with:
+      #     free_up_space: false
+
+      - name: Download dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libmariadb-dev libmariadb3
+          sudo apt remove python3-pip
+          wget https://bootstrap.pypa.io/get-pip.py
+          sudo python3 get-pip.py
+          pip install -U pyopenssl cryptography mariadb==1.0.11
+          python glibc-cicd/curator.py poll
+  # fetch_patches:
+  #   # This is a dedicated self hosted runner that will always* run this on time
+  #   runs-on: Ubuntu-20.04
+  #   defaults:
+  #     run:
+  #       working-directory: riscv-gnu-toolchain
+  #   steps:
+  #     - name: Cleanup build folder
+  #       working-directory: ./
+  #       run: |
+  #         ls -la ./
+  #         rm -rf ./* || true
+  #         rm -rf ./.??* || true
+  #         ls -la ./
+
+  #     - uses: actions/checkout@v3
+
+  #     - name: Clone riscv-gnu-toolchain
+  #       working-directory: ./
+  #       run: |
+  #         git submodule update --init riscv-gnu-toolchain
+
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt install python3 -y
+  #         sudo apt install python-is-python3 -y
+  #         sudo apt install zip -y
+
+  #     - name: Get timestamps and make directories
+  #       run: |
+  #         TZ=UTC date -d "@$((($(date +%s) + 0) / 900 * 900))" '+%Y-%m-%dT%H:%M:%S' > current_time_rounded.txt
+  #         python scripts/get_previous_timestamp.py -token ${{ secrets.GITHUB_TOKEN }} -rid ${{ github.run_id }} -repo ewlu/gcc-precommit-ci -workflow Patchworks
+  #         PRIOR_RUN_TIME=$(cat date_cur.txt)
+  #         TZ=UTC date -d "@$((($(date -d $PRIOR_RUN_TIME +%s) + 0) / 900 * 900))" '+%Y-%m-%dT%H:%M:%S' > prior_run_time_rounded.txt
+  #         TZ=UTC date -d "@$((($(date -d $PRIOR_RUN_TIME +%s) - 900) / 900 * 900))" '+%Y-%m-%dT%H:%M:%S' > prior_run_time_minus_15_min_rounded.txt
+
+  #         cat runs.log
+
+  #         echo $PRIOR_RUN_TIME
+  #         cat prior_run_time_minus_15_min_rounded.txt
+  #         cat prior_run_time_rounded.txt
+  #         cat current_time_rounded.txt
+
+  #     - name: Update times for workflow dispatch
+  #       if: ${{ inputs.timestamp != '' }}
+  #       run: |
+  #         TZ=UTC date -d "@$((($(date -d '${{ inputs.timestamp }}' +%s) + 900) / 900 * 900))" '+%Y-%m-%dT%H:%M:%S' > current_time_rounded.txt
+  #         TZ=UTC date -d "@$((($(date -d '${{ inputs.timestamp }}' +%s) - 900) / 900 * 900))" '+%Y-%m-%dT%H:%M:%S' > prior_run_time_rounded.txt
+  #         TZ=UTC date -d "@$((($(date -d '${{ inputs.timestamp }}' +%s) - 1800) / 900 * 900))" '+%Y-%m-%dT%H:%M:%S' > prior_run_time_minus_15_min_rounded.txt
+
+  #         cat prior_run_time_minus_15_min_rounded.txt
+  #         cat prior_run_time_rounded.txt
+  #         cat current_time_rounded.txt
+
+  #     - name: Get list of new patches
+  #       run: |
+  #         mkdir -p patch_urls
+  #         mkdir -p patchworks_metadata
+  #         if [ "${{ inputs.patch_id }}" == "" ]; then
+  #           python scripts/create_patches_files.py -backup $(cat prior_run_time_minus_15_min_rounded.txt) -start $(cat prior_run_time_rounded.txt) -end $(cat current_time_rounded.txt)
+  #         else
+  #           python scripts/create_patches_files.py -patch ${{ inputs.patch_id }}
+  #         fi
+
+  #     - name: List patch artifacts
+  #       id: list_patches
+  #       run: |
+  #         export PATCHLIST="$(cat artifact_names.txt)"
+  #         echo "patch_list=$PATCHLIST" >> $GITHUB_OUTPUT
+
+  #     - name: Make artifact zip
+  #       run: |
+  #         zip -r patch_files.zip patch_urls
+  #         zip -r patchworks_metadata_files.zip patchworks_metadata
+
+  #     - name: Upload patch urls zip
+  #       if: ${{ steps.list_patches.outputs.patch_list != '[]' }}
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: patch_urls
+  #         path: |
+  #           riscv-gnu-toolchain/patch_files.zip
+  #         retention-days: 90
+
+  #     - name: Upload patchworks metadata zip
+  #       if: ${{ steps.list_patches.outputs.patch_list != '[]' }}
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: patchworks_metadata_files
+  #         path: |
+  #           riscv-gnu-toolchain/patchworks_metadata_files.zip
+  #         retention-days: 90
+
+  #   outputs:
+  #     list_of_patch_names: ${{ steps.list_patches.outputs.patch_list }}
+
+  # init-submodules:
+  #   needs: [fetch_patches]
+  #   if: ${{ needs.fetch_patches.outputs.list_of_patch_names != '[]' }}
+  #   uses: ./.github/workflows/init-submodules.yaml
+  #   with:
+  #     baseline_hash: ${{ inputs.baseline_gcc_hash }}
+  #     tot_hash: ${{ inputs.tip_of_tree_hash }}
+
+  # patch_matrix:
+  #   needs: [fetch_patches, init-submodules]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       patch_name: ${{ fromJSON(needs.fetch_patches.outputs.list_of_patch_names) }}
+  #   uses: ./.github/workflows/run-checks.yaml
+  #   permissions:
+  #     issues: write
+  #   with:
+  #     patch_name: ${{ matrix.patch_name }}
+  #     baseline_hash: ${{ needs.init-submodules.outputs.baseline_hash }}
+  #     tot_hash: ${{ needs.init-submodules.outputs.tot_hash }}
+  #   secrets: inherit
