@@ -32,10 +32,17 @@ jobs:
   init-submodules:
     runs-on: ubuntu-20.04
     steps:
-      # - name: Setup env
-      #   uses: ./.github/actions/common/setup-env
-      #   with:
-      #     free_up_space: false
+      - uses: actions/checkout@v3
+
+      - name: See current environment
+        run: |
+          pwd
+          ls -al
+
+      - name: Setup env
+        uses: ./.github/actions/common/setup-env
+        with:
+          free_up_space: false
 
       - name: Download dependencies
         run: |
