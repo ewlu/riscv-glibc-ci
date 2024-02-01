@@ -5,6 +5,10 @@ inputs:
     description: 'Do (or dont) free up space by deleting unused libraries. Defaults to false'
     required: false
     default: 'false'
+  python_libs:
+    description: 'Do (or do not) download python libraries. Defaults to false'
+    required: false
+    default: 'false'
 
 runs:
   using: "composite"
@@ -26,3 +30,16 @@ runs:
           sudo rm -rf /usr/local/lib/android
           echo "-- After --"
           df -h
+
+      - name: Download python libraries
+        shell: bash
+        if: inputs.python_libs == 'true'
+        run: |
+          sudo apt update
+          sudo apt install -y libmariadb-dev libmariadb3
+          sudo apt remove python3-pip
+          wget https://bootstrap.pypa.io/get-pip.py
+          sudo python3 get-pip.py
+          pip install -U pyopenssl cryptography mariadb==1.0.11 gnupg pygit2 requests
+
+       
