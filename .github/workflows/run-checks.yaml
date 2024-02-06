@@ -357,16 +357,27 @@ jobs:
       build_only: ${{ steps.build-only.outputs.build_only }}
       patch_applied_glibchash: ${{ steps.new-glibc-hash.outputs.patch_applied_glibchash }}
 
-  # build_test:
+  # build_many_glibcs:
   #   needs: [download_patches, create-issue, apply]
   #   if: ${{ needs.apply.outputs.early_exit != 'true' }}
-  #   uses: ./.github/workflows/build-target.yaml
+  #   uses: ./.github/workflows/build-glibcs.yaml
   #   with:
   #     patch_name: ${{ inputs.patch_name }}
   #     baseline_hash: ${{ inputs.baseline_hash }}
   #     build_only: ${{ needs.apply.outputs.build_only }}
   #     patch_applied_glibchash: ${{ needs.apply.outputs.patch_applied_glibchash }}
   #     tot_hash: ${{ inputs.tot_hash }}
-  #     issue_num: ${{ needs.create-issue.outputs.issue_num }}
-  #     additional_info: ${{ needs.create-issue.outputs.additional_info }}
-  #   secrets: inherit
+
+  build_test:
+    needs: [download_patches, create-issue, apply]
+    if: ${{ needs.apply.outputs.early_exit != 'true' }}
+    uses: ./.github/workflows/build-target.yaml
+    with:
+      patch_name: ${{ inputs.patch_name }}
+      baseline_hash: ${{ inputs.baseline_hash }}
+      build_only: ${{ needs.apply.outputs.build_only }}
+      patch_applied_glibchash: ${{ needs.apply.outputs.patch_applied_glibchash }}
+      tot_hash: ${{ inputs.tot_hash }}
+      issue_num: ${{ needs.create-issue.outputs.issue_num }}
+      additional_info: ${{ needs.create-issue.outputs.additional_info }}
+    secrets: inherit

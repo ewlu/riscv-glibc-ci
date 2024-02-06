@@ -1,0 +1,118 @@
+name: Build-Glibcs
+
+on:
+  workflow_call:
+    inputs:
+      patch_name:
+        required: true
+        type: string
+      baseline_hash:
+        required: true
+        type: string
+      patch_applied_glibchash:
+        required: true
+        type: string
+      issue_num:
+        required: true
+        type: string
+      build_comment_id:
+        required: true
+        type: string
+      run_on_self_hosted:
+        required: true
+        type: string
+      tot_hash:
+        required: true
+        type: string
+      additional_info:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    environment: production
+    if: ${{ inputs.run_on_self_hosted != 'true' }}
+    defaults:
+      run:
+        working-directory: riscv-gnu-toolchain
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup env
+        uses: ./.github/actions/common/setup-env
+        with:
+          free_up_space: true
+
+      - name: Restore submodules from cache
+        uses: actions/download-artifact@v3
+        with:
+          name: gcc-sources-${{ inputs.baseline_hash }}
+          path: ./riscv-gnu-toolchain
+
+      - name: Restore submodules
+        run: |
+          rm -rf .git binutils dejagnu gcc gdb glibc newlib qemu
+          unzip cache.zip
+          rm -rf cache.zip
+          rm -rf binutils dejagnu gcc gdb newlib qemu
+
+      - name: Extract and apply patches
+        uses: ./.github/actions/extract-apply-patches-trunk-or-baseline
+        with:
+          patch_name: ${{ inputs.patch_name }}
+          baseline_hash: ${{ inputs.baseline_hash }}
+          build_only: ${{ inputs.build_only }}
+          tot_hash: ${{ inputs.tot_hash }}
+
+      - name: Setup glibcs
+        run: |
+          mkdir -p build-many-glibcs
+          cd build-many-glibcs
+          time ../glibc/scripts/build-many-glibcs.py ./ checkout
+
+      - name: Build host libraries
+        run: |
+          cd build-many-glibcs
+          time ../glibc/scripts/build-many-glibcs.py ./ host-libraries -j $(nproc)
+
+      - name: Build cross compilers
+        run: |
+          cd build-many-glibcs
+          time ../glibc/scripts/build-many-glibcs.py ./ compilers -j $(nproc)
+
+      - name: Build glibcs
+        run: |
+          cd build-many-glibcs
+          time ../glibc/scripts/build-many-glibcs.py ./ compilers -j $(nproc) 2>&1 | tee build-many-glibcs.log
+
+      - name: upload log
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-many-glibcs-results
+          path: |
+            riscv-gnu-toolchain/build-many-glibcs/build-many-glibcs.log
+          retention-days: 90
+
+
+      # - name: Build pending comment
+      #   run: |
+      #     if [ '${{ inputs.build_only }}' == 'true' ]; then
+      #       python scripts/update_issue_status.py -token ${{ secrets.GITHUB_TOKEN }} -state 'Pending' -comment ${{ inputs.build_comment_id }} -target ${{ inputs.mode }}-${{ inputs.target }}-${{ inputs.multilib }} -check 'Build GCC' -repo ewlu/riscv-glibc-ci -baseline ${{ inputs.tot_hash }}
+      #     else
+      #       python scripts/update_issue_status.py -token ${{ secrets.GITHUB_TOKEN }} -state 'Pending' -comment ${{ inputs.build_comment_id }} -target ${{ inputs.mode }}-${{ inputs.target }}-${{ inputs.multilib }} -check 'Build GCC' -repo ewlu/riscv-glibc-ci -baseline ${{ inputs.baseline_hash }}
+      #     fi
+      #     printf "\n[Additional information](${{ inputs.additional_info }})\n" >> comment.md
+
+      # - name: Update build pending report comment
+      #   uses: ./.github/actions/update-comment
+      #   with:
+      #     comment_id: ${{ inputs.build_comment_id }}
+      #     file_path: riscv-gnu-toolchain/comment.md
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Report build
+      #   run: |
+      #     python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 patches/${{ inputs.patch_name }})  -desc 'Build started' -iid '${{ inputs.issue_num }}#issuecomment-${{ inputs.build_comment_id }}' -state 'pending' -context 'build--${{ inputs.mode }}-${{ inputs.target }}-${{ inputs.multilib }}' -token '${{ secrets.PATCHWORK_API }}'
+      #   continue-on-error: true
+

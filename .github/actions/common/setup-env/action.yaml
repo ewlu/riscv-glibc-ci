@@ -28,6 +28,35 @@ runs:
           df -h
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
+
+          sudo rm -rf /opt/microsoft
+          sudo rm -rf /opt/google
+          sudo rm -rf /opt/az  # Azure
+          sudo rm -rf /opt/actionarchivecache
+          sudo rm -rf /opt/mssql-tools
+          
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache/Ruby
+          sudo rm -rf /opt/hostedtoolcache/go
+          sudo rm -rf /opt/hostedtoolcache/node
+
+          # sudo rm -rf /usr/lib/jvm
+
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/share/az*
+          sudo rm -rf /usr/share/rubygems-integration
+          sudo rm -rf /usr/share/zsh
+          sudo rm -rf /usr/share/monodoc
+          sudo rm -rf /usr/share/emacs*
+          sudo rm -rf /usr/share/postgresql*
+
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium
+          sudo rm -rf /usr/local/share/aws*
+
+          # Postcommit remove dashboards
+          rm -rf dashboard
+          
           echo "-- After --"
           df -h
 
