@@ -37,7 +37,9 @@ jobs:
       - name: Determine baseline
         id: baseline-hash
         run: |
-          python ./scripts/get_baseline_hash.py -token ${{ secrets.GITHUB_TOKEN }}
+          # python ./scripts/get_baseline_hash.py -token ${{ secrets.GITHUB_TOKEN }}
+          echo $(cd glibc && git rev-parse HEAD) > baseline.txt
+          
 
           if [ '${{ inputs.baseline_hash }}' == '' ] ; then export BASELINE_HASH=$(cat baseline.txt); else export BASELINE_HASH=${{ inputs.baseline_hash }}; fi
           echo $BASELINE_HASH
