@@ -69,6 +69,7 @@ jobs:
           sudo apt install zip -y
 
       - name: Get timestamps and make directories
+        if: ${{ inputs.timestamp == '' }}
         run: |
           TZ=UTC date -d "@$((($(date +%s) + 0) / 900 * 900))" '+%Y-%m-%dT%H:%M:%S' > current_time_rounded.txt
           python scripts/get_previous_timestamp.py -token ${{ secrets.GITHUB_TOKEN }} -rid ${{ github.run_id }} -repo ewlu/riscv-glibc-ci -workflow Patchwork
@@ -99,9 +100,9 @@ jobs:
           mkdir -p patch_urls
           mkdir -p patchworks_metadata
           if [ "${{ inputs.patch_id }}" == "" ]; then
-            python scripts/create_patches_files.py -backup $(cat prior_run_time_minus_15_min_rounded.txt) -start $(cat prior_run_time_rounded.txt) -end $(cat current_time_rounded.txt) -project
+            python scripts/create_patches_files.py -backup $(cat prior_run_time_minus_15_min_rounded.txt) -start $(cat prior_run_time_rounded.txt) -end $(cat current_time_rounded.txt) -project 2
           else
-            python scripts/create_patches_files.py -patch ${{ inputs.patch_id }}
+            python scripts/create_patches_files.py -patch ${{ inputs.patch_id }} -project 2
           fi
 
       - name: List patch artifacts
