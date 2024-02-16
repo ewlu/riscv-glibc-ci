@@ -1,0 +1,36 @@
+name: "Run testsuite"
+description: "Runs testsuite"
+inputs:
+  target:
+    description: 'target arch-abi'
+    required: true
+  glibchash:
+    description: 'glibchash'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+      - name: Run testsuite
+        shell: bash
+        working-directory: riscv-gnu-toolchain
+        run: |
+          GLIBC_BIN_PATH=$(pwd)/bin
+          cd build/build-glibc-linux-${{ inputs.target }}
+          PATH=$GLIBC_BIN_PATH:$PATH make -j $(nproc) -k
+
+      - name: Build sum files zip
+        shell: bash
+        working-directory: riscv-gnu-toolchain
+        run: |
+          mkdir sum_files
+          for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.sum"`; do cp $file sum_files; done
+          zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files.zip sum_files
+
+      - name: Upload sum file artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files
+          path: |
+            riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files.zip
+          retention-days: 90

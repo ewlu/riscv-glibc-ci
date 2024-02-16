@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - main
-  # schedule:
-  #   # Run every 15 minutes offset by 7 to try to avoid github's high-load times
-  #   # https://stackoverflow.com/questions/59560214/github-action-works-on-push-but-not-scheduled
-  #   - cron: 7,22,37,52 * * * *
+  schedule:
+    # Run every 15 minutes offset by 7 to try to avoid github's high-load times
+    # https://stackoverflow.com/questions/59560214/github-action-works-on-push-but-not-scheduled
+    - cron: 7,22,37,52 * * * *
   # pull_request:
   #   branches:
   #     - main
@@ -29,19 +29,7 @@ on:
         required: false
 
 jobs:
-  # init-submodules:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - name: Setup env
-  #       uses: ./.github/actions/common/setup-env
-  #       with:
-  #         free_up_space: true
-  #         python_libs: true
-
   fetch_patches:
-    # This is a dedicated self hosted runner that will always* run this on time
     runs-on: Ubuntu-20.04
     defaults:
       run:

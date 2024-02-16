@@ -1,0 +1,103 @@
+name: Build-Initial
+
+on:
+  workflow_call:
+    inputs:
+      patch_name:
+        required: false
+        type: string
+      baseline_hash:
+        required: true
+        type: string
+      patch_applied_glibchash:
+        required: false
+        type: string
+      issue_num:
+        required: true
+        type: string
+      additional_info:
+        required: true
+        type: string
+
+jobs:
+  build-target-linux:
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: riscv-gnu-toolchain
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup env
+        uses: ./.github/actions/common/setup-env
+        with:
+          free_up_space: true
+
+      - name: Check baseline
+        id: not-baseline
+        if: ${{ inputs.patch_name == '' }} && ${{ inputs.patch_applied_glibchash == '' }}
+        run: |
+          echo "not_baseline=true" >> $GITHUB_OUTPUT
+
+      - name: Effective hash
+        id: ehash
+        run: |
+          if [ '${{ inputs.patch_applied_glibchash }}' == '' ]; then
+            echo "ehash=${{inputs.baseline_hash}}" >> $GITHUB_OUTPUT
+          else
+            echo "ehash=${{inputs.applied_glibc_hash}}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Apply patches
+        uses: ./.github/actions/extract-apply-patches
+        if: ${{ steps.not-baseline.outputs.not_baseline == 'true' }}
+        with:
+          patch_name: ${{ inputs.patch_name }}
+          baseline_hash: ${{ inputs.baseline_hash }}
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+           ../configure --prefix=$(pwd) --with-multilib-generator='rv64gcv-lp64d--;rv32gcv-lp64d--'
+
+      - name: Make linux
+        run: |
+          cd build
+          make linux -j $(nproc)
+
+      - name: Make qemu
+        run: |
+          cd build
+          make stamps/build-qemu -j $(nproc)
+
+      - name: Zip binaries
+        run: |
+          zip -r glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}.zip build/bin
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}
+          path: |
+            riscv-gnu-toolchain/glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}.zip
+          retention-days: 5
+
+      - name: Zip stage2
+        if: ${{ inputs.upload_stage2_artifacts == 'true' }}
+        shell: bash
+        run: |
+          zip --symlinks -r stage2.zip build
+
+      - name: Upload stage2 artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}-stage2
+          path: |
+            riscv-gnu-toolchain/stage2.zip
+          retention-days: 5
+          
+
+        
+
+

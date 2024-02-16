@@ -1,0 +1,101 @@
+name: Test-Regression
+
+on:
+  workflow_call:
+    inputs:
+      patch_name:
+        required: false
+        type: string
+      target:
+        required: true
+        type: string
+      baseline_hash:
+        required: true
+        type: string
+      patch_applied_glibchash:
+        required: false
+        type: string
+      issue_num:
+        required: true
+        type: string
+      test_comment_id:
+        required: true
+        type: string
+      additional_info:
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    environment: production
+    if: ${{ inputs.run_on_self_hosted != 'true' }}
+    defaults:
+      run:
+        working-directory: riscv-gnu-toolchain
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup env
+        uses: ./.github/actions/common/setup-env
+        with:
+          free_up_space: true
+
+      - name: Restore submodules from cache
+        uses: actions/download-artifact@v3
+        with:
+          name: glibc-sources-${{ inputs.baseline_hash }}
+          path: ./riscv-gnu-toolchain
+
+      - name: Restore submodules
+        run: |
+          rm -rf .git binutils dejagnu gcc gdb glibc newlib qemu
+          unzip cache.zip
+          rm -rf cache.zip
+
+      - name: Check baseline
+        id: not-baseline
+        if: ${{ inputs.patch_name == '' }} && ${{ inputs.patch_applied_glibchash == '' }}
+        run: |
+          echo "not_baseline=true" >> $GITHUB_OUTPUT
+
+      - name: Effective hash
+        id: ehash
+        run: |
+          if [ '${{ inputs.patch_applied_glibchash }}' == '' ]; then
+            echo "ehash=${{inputs.baseline_hash}}" >> $GITHUB_OUTPUT
+          else
+            echo "ehash=${{inputs.applied_glibc_hash}}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract and apply patches
+        uses: ./.github/actions/extract-apply-patches-trunk-or-baseline
+        if: ${{ steps.not-baseline.outputs.not_baseline == 'true' }}
+        with:
+          patch_name: ${{ inputs.patch_name }}
+          baseline_hash: ${{ inputs.baseline_hash }}
+          build_only: ${{ inputs.build_only }}
+          tot_hash: ${{ inputs.tot_hash }}
+
+      - name: Restore Stage2 Artifacts
+        uses: ./.github/actions/restore-stage-2
+        with:
+          mode: ${{ inputs.mode }}
+          target: ${{ inputs.target }}
+          glibchash: ${{ inputs.patch_applied_glibchash }}
+          multilib: ${{ inputs.multilib }}
+
+      - name: Replace allowlist
+        run: |
+          rm -rf test/
+          cp -r ../test/ .
+
+      - name: Run Testsuite
+        uses: ./.github/actions/common/run-testsuite
+        with:
+          mode: ${{ inputs.mode }}
+          target: ${{ inputs.target }}
+          glibchash: ${{ inputs.patch_applied_glibchash }}
+          multilib: ${{ inputs.multilib }}
+
+
