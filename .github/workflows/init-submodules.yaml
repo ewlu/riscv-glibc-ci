@@ -37,7 +37,9 @@ jobs:
       - name: Determine baseline
         id: baseline-hash
         run: |
-          cd riscv-gnu-toolchain/glibc
+          cd riscv-gnu-toolchain
+          git submodule update --init glibc
+          cd glibc
           git checkout master
           git rev-parse HEAD > baseline.txt
 
