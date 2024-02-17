@@ -37,9 +37,9 @@ jobs:
       - name: Determine baseline
         id: baseline-hash
         run: |
-          # python ./scripts/get_baseline_hash.py -token ${{ secrets.GITHUB_TOKEN }}
-          echo $(cd glibc && git rev-parse HEAD) > baseline.txt
-          
+          cd riscv-gnu-toolchain/glibc
+          git checkout master
+          git rev-parse HEAD > baseline.txt
 
           if [ '${{ inputs.baseline_hash }}' == '' ] ; then export BASELINE_HASH=$(cat baseline.txt); else export BASELINE_HASH=${{ inputs.baseline_hash }}; fi
           echo $BASELINE_HASH
@@ -127,5 +127,5 @@ jobs:
           retention-days: 5
 
     outputs:
-      baseline_hash: ${{ steps.baseline-hash.outputs.baseline_hash }}
+      baseline_hash: ${{ steps.tot-hash.outputs.tot_hash }}
       tot_hash: ${{ steps.tot-hash.outputs.tot_hash }}
