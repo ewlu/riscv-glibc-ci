@@ -40,6 +40,7 @@ jobs:
         run: |
           cd riscv-gnu-toolchain/glibc
           git checkout master
+          git reset --hard origin/master
           git rev-parse HEAD > baseline.txt
 
           if [ '${{ inputs.baseline_hash }}' == '' ] ; then export BASELINE_HASH=$(cat baseline.txt); else export BASELINE_HASH=${{ inputs.baseline_hash }}; fi
