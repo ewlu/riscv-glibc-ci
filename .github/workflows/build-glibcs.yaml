@@ -47,7 +47,7 @@ jobs:
       - name: Restore submodules from cache
         uses: actions/download-artifact@v3
         with:
-          name: gcc-sources-${{ inputs.baseline_hash }}
+          name: glibc-sources-${{ inputs.baseline_hash }}
           path: ./riscv-gnu-toolchain
 
       - name: Restore submodules

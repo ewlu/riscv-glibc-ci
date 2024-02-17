@@ -35,7 +35,7 @@ jobs:
 
       - name: Check baseline
         id: not-baseline
-        if: ${{ inputs.patch_name == '' }} && ${{ inputs.patch_applied_glibchash == '' }}
+        if: ${{ inputs.patch_name != '' && inputs.patch_applied_glibchash != '' }}
         run: |
           echo "not_baseline=true" >> $GITHUB_OUTPUT
 
