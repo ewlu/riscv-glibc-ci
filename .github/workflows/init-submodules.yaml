@@ -36,6 +36,7 @@ jobs:
 
       - name: Determine baseline
         id: baseline-hash
+        working-directory: ./
         run: |
           cd riscv-gnu-toolchain
           git submodule update --init glibc
@@ -93,7 +94,7 @@ jobs:
           echo $TOT_HASH
           echo "tot_hash=$TOT_HASH" >> $GITHUB_OUTPUT
 
-      - name: Checkout baseline GCC hash
+      - name: Checkout baseline GLIBC hash
         working-directory: riscv-gnu-toolchain/glibc
         run: |
           git checkout ${{ steps.baseline-hash.outputs.baseline_hash }}
