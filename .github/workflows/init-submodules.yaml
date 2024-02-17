@@ -38,9 +38,7 @@ jobs:
         id: baseline-hash
         working-directory: ./
         run: |
-          cd riscv-gnu-toolchain
-          git submodule update --init glibc
-          cd glibc
+          cd riscv-gnu-toolchain/glibc
           git checkout master
           git rev-parse HEAD > baseline.txt
 
