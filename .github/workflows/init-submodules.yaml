@@ -41,6 +41,8 @@ jobs:
           git submodule update --init glibc
           cd glibc
           git checkout master
+          git reset --hard HEAD
+          git pull
           git rev-parse HEAD > baseline.txt
 
           if [ '${{ inputs.baseline_hash }}' == '' ] ; then export BASELINE_HASH=$(cat baseline.txt); else export BASELINE_HASH=${{ inputs.baseline_hash }}; fi
@@ -87,6 +89,7 @@ jobs:
         id: tot-hash
         run: |
           git checkout master
+          git reset --hard HEAD
           git pull
           if [ '${{ inputs.tot_hash }}' != '' ]; then git checkout ${{ inputs.tot_hash }}; fi
           export TOT_HASH=$(git rev-parse HEAD)
