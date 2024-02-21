@@ -51,6 +51,18 @@ jobs:
             echo "ehash=${{inputs.applied_glibc_hash}}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Restore submodules from cache
+        uses: actions/download-artifact@vv3
+        with: 
+          name: glibc-sources-${{ inputs.baseline_hash }}
+          path: ./riscv-gnu-toolchain
+
+      - name: Restore submodules
+        run: |
+          rm -rf .git binutils dejagnu gcc gdb glibc newlib qemu
+          unzip cache.zip
+          rm -rf cache.zip
+
       - name: Apply patches
         uses: ./.github/actions/extract-apply-patches-trunk-or-baseline
         if: ${{ steps.not-baseline.outputs.not_baseline == 'true' }}
