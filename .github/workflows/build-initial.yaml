@@ -19,7 +19,8 @@ on:
         required: true
         type: string
     outputs:
-      glibcs: ${{ jobs.build-target-linux.outputs.glibcs }}
+      glibcs: 
+        value: ${{ jobs.build-target-linux.outputs.glibcs }}
 
 jobs:
   build-target-linux:
