@@ -83,19 +83,19 @@ jobs:
       build_glibc_comment_id: ${{ steps.build-comment.outputs.comment-id }}
       test_glibc_comment_id: ${{ steps.test-comment.outputs.comment-id }}
 
-  build-many-glibcs: 
-    needs: [initialize-comments]
-    uses: ./.github/workflows/build-glibcs.yaml
-    with:
-      patch_name: ${{ inputs.patch_name }}
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
-      issue_num: ${{ inputs.issue_num }}
-      build_comment_id: ${{ needs.initialize-comments.outputs.build_glibc_comment_id }}
-      run_on_self_hosted: false
-      tot_hash: ${{ inputs.tot_hash }}
-      additional_info: ${{ inputs.additional_info }}
-    secrets: inherit
+  # build-many-glibcs: 
+  #   needs: [initialize-comments]
+  #   uses: ./.github/workflows/build-glibcs.yaml
+  #   with:
+  #     patch_name: ${{ inputs.patch_name }}
+  #     baseline_hash: ${{ inputs.baseline_hash }}
+  #     patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
+  #     issue_num: ${{ inputs.issue_num }}
+  #     build_comment_id: ${{ needs.initialize-comments.outputs.build_glibc_comment_id }}
+  #     run_on_self_hosted: false
+  #     tot_hash: ${{ inputs.tot_hash }}
+  #     additional_info: ${{ inputs.additional_info }}
+  #   secrets: inherit
 
   build-glibc-linux-baseline:
     needs: [initialize-comments]
