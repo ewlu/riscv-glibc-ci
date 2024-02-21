@@ -18,6 +18,8 @@ on:
       additional_info:
         required: true
         type: string
+    outputs:
+      glibcs: ${{ jobs.build-target-linux.outputs.glibcs }}
 
 jobs:
   build-target-linux:
@@ -55,6 +57,10 @@ jobs:
           patch_name: ${{ inputs.patch_name }}
           baseline_hash: ${{ inputs.baseline_hash }}
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get install autoconf automake autotools-dev curl python3 python3-pip libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev ninja-build git cmake libglib2.0-dev jq
+
       - name: Build
         run: |
           mkdir build
@@ -70,6 +76,14 @@ jobs:
         run: |
           cd build
           make stamps/build-qemu -j $(nproc)
+
+      - name: Output glibcs
+        id: to-build
+        run: |
+          cd build
+          TO_BUILD=$(ls --color=never -d build-glibc-linux-rv* | jq -R -s -c 'split("\n")[:-1]')
+          echo $TO_BUILD
+          echo "glibcs=$TO_BUILD" >> $GITHUB_OUTPUT
 
       - name: Zip binaries
         run: |
@@ -96,8 +110,5 @@ jobs:
           path: |
             riscv-gnu-toolchain/stage2.zip
           retention-days: 5
-          
-
-        
-
-
+    outputs:
+      glibcs: ${{ steps.to-build.outputs.glibcs }}

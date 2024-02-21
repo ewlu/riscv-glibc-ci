@@ -125,11 +125,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          [
-            rv32gcv-ilp32d,
-            rv64gcv-lp64d,
-          ]
+        target: ${{ fromJson(needs.build-glibc-linux-baseline.outputs.glibcs) }}
     with:
       patch_name: 
       baseline_hash: ${{ inputs.baseline_hash }}
@@ -146,11 +142,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          [
-            rv32gcv-ilp32d,
-            rv64gcv-lp64d,
-          ]
+        target: ${{ fromJson(needs.build-glibc-linux-baseline.outputs.glibcs) }}
     with:
       patch_name: ${{ inputs.patch_name }}
       baseline_hash: ${{ inputs.baseline_hash }}
