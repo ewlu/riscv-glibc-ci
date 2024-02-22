@@ -78,7 +78,7 @@ jobs:
       - name: Restore Stage2 Artifacts
         uses: ./.github/actions/restore-stage-2
         with:
-          glibchash: ${{ inputs.patch_applied_glibchash }}
+          glibchash: ${{ steps.ehash.outputs.ehash }}
 
       - name: Replace allowlist
         run: |
@@ -89,6 +89,6 @@ jobs:
         uses: ./.github/actions/common/run-testsuite
         with:
           target: ${{ inputs.target }}
-          glibchash: ${{ inputs.patch_applied_glibchash }}
+          glibchash: ${{ steps.ehash.outputs.ehash }}
 
 
