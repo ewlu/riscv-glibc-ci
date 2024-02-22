@@ -52,7 +52,7 @@ jobs:
           fi
 
       - name: Restore submodules from cache
-        uses: actions/download-artifact@vv3
+        uses: actions/download-artifact@v3
         with: 
           name: glibc-sources-${{ inputs.baseline_hash }}
           path: ./riscv-gnu-toolchain
