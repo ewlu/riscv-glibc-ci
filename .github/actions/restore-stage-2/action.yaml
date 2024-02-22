@@ -30,10 +30,10 @@ runs:
           mkdir -p build/stamps
           cd build/stamps
           touch -d "+2 days" check-write-permission
-          touch -d "+2 days" build-gdb-${{ inputs.mode }}
-          touch -d "+2 days" build-binutils-${{ inputs.mode }}
+          touch -d "+2 days" build-gdb-linux
+          touch -d "+2 days" build-binutils-linux
           touch -d "+2 days" build-linux-headers
-          touch -d "+2 days" build-gcc-${{ inputs.mode }}-stage1
+          touch -d "+2 days" build-gcc-linux-stage1
           touch -d "+2 days" build-glibc-linux-headers
           touch -d "+2 days" build-glibc-linux-rv32gc-ilp32d
           touch -d "+2 days" build-glibc-linux-rv32imac-ilp32
@@ -49,9 +49,9 @@ runs:
           touch -d "+2 days" build-glibc-linux-rv64gcv_zvbb_zvbc_zvkg_zvkn_zvknc_zvkned_zvkng_zvknha_zvknhb_zvks_zvksc_zvksed_zvksg_zvksh_zvkt-lp64d
           touch -d "+2 days" build-glibc-linux-rv64imafdcv_zicond_zawrs_zbc_zvkng_zvksg_zvbb_zvbc_zicsr_zba_zbb_zbs_zicbom_zicbop_zicboz_zfhmin_zkt-lp64d
           touch -d "+2 days" build-newlib-nano
-          touch -d "+2 days" build-${{ inputs.mode }}
+          touch -d "+2 days" build-linux
           touch -d "+2 days" merge-newlib-nano
-          touch -d "+2 days" build-gcc-${{ inputs.mode }}-stage2
+          touch -d "+2 days" build-gcc-linux-stage2
 
       # Checks that the cache has been properly setup (make doesn't try rebuilding)
       - name: Build sanity check (should be instant)

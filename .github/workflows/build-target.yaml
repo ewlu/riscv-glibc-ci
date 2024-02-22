@@ -142,7 +142,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJson(needs.build-glibc-linux-baseline.outputs.glibcs) }}
+        target: ${{ fromJson(needs.build-glibc-linux-applied.outputs.glibcs) }}
     with:
       patch_name: ${{ inputs.patch_name }}
       baseline_hash: ${{ inputs.baseline_hash }}

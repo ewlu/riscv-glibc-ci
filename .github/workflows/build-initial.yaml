@@ -111,7 +111,6 @@ jobs:
           retention-days: 5
 
       - name: Zip stage2
-        if: ${{ inputs.upload_stage2_artifacts == 'true' }}
         shell: bash
         run: |
           zip --symlinks -r stage2.zip build

@@ -74,16 +74,11 @@ jobs:
         with:
           patch_name: ${{ inputs.patch_name }}
           baseline_hash: ${{ inputs.baseline_hash }}
-          build_only: ${{ inputs.build_only }}
-          tot_hash: ${{ inputs.tot_hash }}
 
       - name: Restore Stage2 Artifacts
         uses: ./.github/actions/restore-stage-2
         with:
-          mode: ${{ inputs.mode }}
-          target: ${{ inputs.target }}
           glibchash: ${{ inputs.patch_applied_glibchash }}
-          multilib: ${{ inputs.multilib }}
 
       - name: Replace allowlist
         run: |
@@ -93,9 +88,7 @@ jobs:
       - name: Run Testsuite
         uses: ./.github/actions/common/run-testsuite
         with:
-          mode: ${{ inputs.mode }}
           target: ${{ inputs.target }}
           glibchash: ${{ inputs.patch_applied_glibchash }}
-          multilib: ${{ inputs.multilib }}
 
 
