@@ -11,7 +11,7 @@ runs:
       - name: Restore stage2
         uses: actions/download-artifact@v3
         with:
-          name: glibc-rv64gcv-lp64d-${{ inputs.glibchash }}-stage2
+          name: glibc-linux-rv64gcv-lp64d-${{ inputs.glibchash }}-stage2
           path: ./riscv-gnu-toolchain
 
       - name: Unzip artifacts
