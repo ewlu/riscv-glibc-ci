@@ -65,7 +65,7 @@ jobs:
           if [ '${{ inputs.patch_applied_glibchash }}' == '' ]; then
             echo "ehash=${{inputs.baseline_hash}}" >> $GITHUB_OUTPUT
           else
-            echo "ehash=${{inputs.applied_glibc_hash}}" >> $GITHUB_OUTPUT
+            echo "ehash=${{inputs.patch_applied_glibchash}}" >> $GITHUB_OUTPUT
           fi
 
       - name: Extract and apply patches
