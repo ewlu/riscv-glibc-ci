@@ -80,10 +80,10 @@ jobs:
         with:
           glibchash: ${{ steps.ehash.outputs.ehash }}
 
-      - name: Replace allowlist
-        run: |
-          rm -rf test/
-          cp -r ../test/ .
+      # - name: Replace allowlist
+      #   run: |
+      #     rm -rf test/
+      #     cp -r ../test/ .
 
       - name: Run Testsuite
         uses: ./.github/actions/common/run-testsuite
