@@ -86,7 +86,7 @@ jobs:
       #     cp -r ../test/ .
 
       - name: Run Testsuite
-        uses: ./.github/actions/common/run-testsuite
+        uses: ./.github/actions/run-testsuite
         with:
           target: ${{ inputs.target }}
           glibchash: ${{ steps.ehash.outputs.ehash }}
