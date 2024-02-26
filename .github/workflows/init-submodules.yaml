@@ -88,7 +88,7 @@ jobs:
         working-directory: riscv-gnu-toolchain/glibc
         id: tot-hash
         run: |
-          git checkout master
+          git checkout master -f
           git reset --hard HEAD
           git pull
           if [ '${{ inputs.tot_hash }}' != '' ]; then git checkout ${{ inputs.tot_hash }}; fi
