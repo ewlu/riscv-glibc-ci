@@ -26,8 +26,16 @@ runs:
         working-directory: riscv-gnu-toolchain
         run: |
           mkdir sum_files
-          for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.sum"`; do cp $file sum_files; done
+          mkdir out_files
+          mkdir test_result_files
+          for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.sum"`; do cp -r --parents $file sum_files; done
           zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files.zip sum_files
+
+          for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.out"`; do cp -r --parents $file sum_files; done
+          zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files.zip sum_files
+
+          for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.test-result"`; do cp -r --parents $file sum_files; done
+          zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files.zip sum_files
 
       - name: Upload sum file artifacts
         uses: actions/upload-artifact@v3
@@ -35,4 +43,20 @@ runs:
           name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files
           path: |
             riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files.zip
+          retention-days: 90
+
+      - name: Upload out file artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files
+          path: |
+            riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files.zip
+          retention-days: 90
+
+      - name: Upload test-result file artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files
+          path: |
+            riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files.zip
           retention-days: 90
