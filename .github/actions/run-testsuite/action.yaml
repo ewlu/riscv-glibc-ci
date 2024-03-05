@@ -16,6 +16,8 @@ runs:
         working-directory: riscv-gnu-toolchain/build
         run: |
           GLIBC_BIN_PATH=$(pwd)/bin
+          echo $GLIBC_BIN_PATH
+          ls $GLIBC_BIN_PATH
           cd build-glibc-linux-${{ inputs.target }}
           PATH=$GLIBC_BIN_PATH:$PATH make check -j $(nproc) -k || true
 
