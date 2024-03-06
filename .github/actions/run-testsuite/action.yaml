@@ -11,52 +11,84 @@ inputs:
 runs:
   using: "composite"
   steps:
+      - name: Build dockerfile
+        shell: bash
+        working-directory: dockerfile
+        run: |
+          docker build --platform linux/$(arch) . -t tester:latest
+
       - name: Run testsuite
         shell: bash
-        working-directory: riscv-gnu-toolchain/build
+        working-directory: ./
         run: |
-          GLIBC_BIN_PATH=$(pwd)/bin
-          echo $GLIBC_BIN_PATH
-          ls $GLIBC_BIN_PATH
-          cd build-glibc-linux-${{ inputs.target }}
-          PATH=$GLIBC_BIN_PATH:$PATH make check -j $(nproc) -k || true
+          cd riscv-gnu-toolchain/
+          MOUNT_PATH=$(pwd) 
+          cd ../dockerfile
+          cp run_tests.sh $MOUNT_PATH
+          docker run -d --name=runner --mount type=bind,source=$MOUNT_PATH,target=$MOUNT_PATH -t tester:latest
+          docker ps -a
+          time docker exec runner $MOUNT_PATH/run_tests.sh $MOUNT_PATH/build ${{ inputs.target }}
+          docker cp runner:$MOUNT_PATH/build/result.tar.gz .
+          mv result.tar.gz glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-results.tar.gz
 
-      - name: Build sum files zip
-        shell: bash
-        working-directory: riscv-gnu-toolchain
-        run: |
-          mkdir sum_files
-          mkdir out_files
-          mkdir test_result_files
-          for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.sum"`; do cp -r --parents $file sum_files; done
-          zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files.zip sum_files
-
-          for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.out"`; do cp -r --parents $file sum_files; done
-          zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files.zip sum_files
-
-          for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.test-result"`; do cp -r --parents $file sum_files; done
-          zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files.zip sum_files
-
-      - name: Upload sum file artifacts
+      - name: Upload result artifacts
         uses: actions/upload-artifact@v3
         with:
           name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files
           path: |
-            riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files.zip
+            dockerfile/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-results.tar.gz
           retention-days: 90
+          # GLIBC_BIN_PATH=$(pwd)/bin
+          # echo $GLIBC_BIN_PATH
+          # ls $GLIBC_BIN_PATH
+          # cd build-glibc-linux-${{ inputs.target }}
+          # PATH=$GLIBC_BIN_PATH:$PATH make check -j $(nproc) -k || true
+      # - name: Run testsuite
+      #   shell: bash
+      #   working-directory: riscv-gnu-toolchain/build
+      #   run: |
+      #     GLIBC_BIN_PATH=$(pwd)/bin
+      #     echo $GLIBC_BIN_PATH
+      #     ls $GLIBC_BIN_PATH
+      #     cd build-glibc-linux-${{ inputs.target }}
+      #     PATH=$GLIBC_BIN_PATH:$PATH make check -j $(nproc) -k || true
 
-      - name: Upload out file artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files
-          path: |
-            riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files.zip
-          retention-days: 90
+      # - name: Build sum files zip
+      #   shell: bash
+      #   working-directory: riscv-gnu-toolchain
+      #   run: |
+      #     mkdir sum_files
+      #     mkdir out_files
+      #     mkdir test_result_files
+      #     for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.sum"`; do cp -r --parents $file sum_files; done
+      #     zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files.zip sum_files
 
-      - name: Upload test-result file artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files
-          path: |
-            riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files.zip
-          retention-days: 90
+      #     for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.out"`; do cp -r --parents $file sum_files; done
+      #     zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files.zip sum_files
+
+      #     for file in `find build/build-glibc-linux-${{ inputs.target }} -name "*.test-result"`; do cp -r --parents $file sum_files; done
+      #     zip -r glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files.zip sum_files
+
+      # - name: Upload sum file artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files
+      #     path: |
+      #       riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files.zip
+      #     retention-days: 90
+
+      # - name: Upload out file artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files
+      #     path: |
+      #       riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-out-files.zip
+      #     retention-days: 90
+
+      # - name: Upload test-result file artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files
+      #     path: |
+      #       riscv-gnu-toolchain/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-test-result-files.zip
+      #     retention-days: 90
