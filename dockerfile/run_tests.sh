@@ -9,6 +9,9 @@ mkdir -p result/out_files
 mkdir -p result/test_result_files
 GLIBC_BIN_PATH=$(pwd)/bin
 PATH=$GLIBC_BIN_PATH:$PATH
+echo $PATH
+ls
+ls $GLIBC_BIN_PATH
 cd build-glibc-linux-$2
 make check -j $(nproc) -k 2>&1 || true | tee log
 
