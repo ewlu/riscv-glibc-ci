@@ -15,7 +15,7 @@ runs:
         shell: bash
         working-directory: dockerfile
         run: |
-          docker build --platform linux/$(arch) . -t tester:latest
+          docker build --platform linux/$(arch) . -t tester:latest --no-cache
 
       - name: Run testsuite
         shell: bash
