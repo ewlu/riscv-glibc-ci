@@ -15,7 +15,8 @@ runs:
         shell: bash
         working-directory: dockerfile
         run: |
-          docker build --platform linux/$(arch) . -t tester:latest --no-cache
+          sudo apt install qemu-user-static -y
+          docker build --platform linux/$(arch) . -t tester:latest
 
       - name: Run testsuite
         shell: bash
@@ -34,7 +35,7 @@ runs:
       - name: Upload result artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-sum-files
+          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-results
           path: |
             dockerfile/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-results.tar.gz
           retention-days: 90
