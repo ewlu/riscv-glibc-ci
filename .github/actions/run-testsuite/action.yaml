@@ -24,6 +24,7 @@ runs:
         run: |
           cd riscv-gnu-toolchain/
           MOUNT_PATH=$(pwd) 
+          echo $MOUNT_PATH
           cd ../dockerfile
           cp run_tests.sh $MOUNT_PATH
           docker run -d --name=runner --mount type=bind,source=$MOUNT_PATH,target=$MOUNT_PATH -t tester:latest

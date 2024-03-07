@@ -1,9 +1,14 @@
 #!/bin/bash
 
+echo $1
+echo $2
 cd $1
+pwd
 mkdir -p result/sum_files
 mkdir -p result/out_files
 mkdir -p result/test_result_files
+GLIBC_BIN_PATH=$(pwd)/bin
+PATH=$GLIBC_BIN_PATH:$PATH
 cd build-glibc-linux-$2
 make check -j $(nproc) -k 2>&1 || true | tee log
 
