@@ -80,7 +80,7 @@ jobs:
         run: |
           MOUNT_PATH=$(pwd)/glibc
           cd ../dockerfile
-          docker build --platform linux/riscv64 . -t tester:latest
+          docker build --platform linux/amd64/v3 . -t tester:latest
           echo "mount_path=$MOUNT_PATH" >> $GITHUB_OUTPUT
 
       - name: build glibc
