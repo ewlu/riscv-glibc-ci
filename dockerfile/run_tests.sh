@@ -13,6 +13,8 @@ echo $PATH
 ls
 ls $GLIBC_BIN_PATH
 cd build-glibc-linux-$2
+pwd
+which riscv64-unknown-linux-gnu-gcc
 make check -j $(nproc) -k 2>&1 || true | tee log
 
 for file in $(find . -name "*.sum"); do
