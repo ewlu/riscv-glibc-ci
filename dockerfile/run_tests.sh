@@ -2,6 +2,7 @@
 
 cd $1
 pwd
+ls
 mkdir -p result/sum_files
 mkdir -p result/out_files
 mkdir -p result/test_result_files

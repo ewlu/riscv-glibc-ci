@@ -2,10 +2,8 @@
 
 cd $1
 pwd
+ls
 mkdir build
-mkdir -p result/sum_files
-mkdir -p result/out_files
-mkdir -p result/test_result_files
 cd build
 mkdir logs
 if [ "$2" == "rv32gcv-ilp32d" ];
