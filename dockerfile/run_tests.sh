@@ -8,10 +8,7 @@ mkdir -p result/sum_files
 mkdir -p result/out_files
 mkdir -p result/test_result_files
 GLIBC_BIN_PATH=$(pwd)/bin
-PATH=$GLIBC_BIN_PATH:$PATH
-echo $PATH
-ls
-ls $GLIBC_BIN_PATH
+export PATH=$GLIBC_BIN_PATH:$PATH
 cd build-glibc-linux-$2
 pwd
 which riscv64-unknown-linux-gnu-gcc
