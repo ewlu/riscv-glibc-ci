@@ -72,55 +72,118 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get install autoconf automake autotools-dev curl python3 python3-pip libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev ninja-build git cmake libglib2.0-dev jq
+          # sudo apt-get install autoconf automake autotools-dev curl python3 python3-pip libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev ninja-build git cmake libglib2.0-dev jq
+          sudo apt install qemu-user-static -y
 
-      - name: Build
+      - name: Build image
+        id: mount-path
         run: |
-          mkdir build
-          cd build
-           ../configure --prefix=$(pwd) --with-multilib-generator='rv64gcv-lp64d--;rv32gcv-ilp32d--'
+          MOUNT_PATH=$(pwd)/glibc
+          cd ../dockerfile
+          docker build --platform linux/riscv64 . -t tester:latest
+          echo "mount_path=$MOUNT_PATH" >> $GITHUB_OUTPUT
 
-      - name: Make linux
+      - name: build glibc
         run: |
-          cd build
-          make linux -j $(nproc)
+          cd ../dockerfile
+          cp build_tests.sh ${{ steps.mount-path.outputs.mount_path }}
+          docker run -d --name=runner --mount type=bind,source=${{ steps.mount-path.outputs.mount_path }},target=${{ steps.mount-path.outputs.mount_path }} -t tester:latest
+          docker ps -a
+          time docker exec runner ${{ steps.mount-path.outputs.mount_path }}/build_tests.sh ${{ steps.mount-path.outputs.mount_path }} ${{ inputs.target }}
 
-      - name: Make qemu
+      - name: Check build success
+        id: build-status
         run: |
-          cd build
-          make stamps/build-qemu -j $(nproc)
+          cd ../dockerfile
+          docker cp runner:$MOUNT_PATH/logs.tar.gz .
+          tar xzvf logs.tar.gz
+          ls logs
+          cat logs/build.status
+          if [[ $(cat logs/build.status) == 1 ]]; then
+            echo "build_status=failure" >> $GITHUB_OUTPUT
+          fi
+          mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-logs.tar.gz
 
-      - name: Output glibcs
-        id: to-build
+      - name: test glibc
+        if: ${{ steps.build-status.outputs.build_status != 'failure' }}
         run: |
-          cd build
-          TO_BUILD=$(ls --color=never -d build-glibc-linux-rv* | jq -R -s -c 'split("\n")[:-1]')
-          echo $TO_BUILD
-          echo "glibcs=$TO_BUILD" >> $GITHUB_OUTPUT
+          cd ../dockerfile
+          cp run_tests.sh ${{ steps.mount-path.outputs.mount_path }}
+          time docker exec runner ${{ steps.mount-path.outputs.mount_path }}/run_tests.sh ${{ steps.mount-path.outputs.mount_path }}
 
-      - name: Zip binaries
+      - name: Check test success
+        if: ${{ steps.build-status.outputs.build_status != 'failure' }}
+        id: test-status
         run: |
-          zip -r glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}.zip build/bin
+          cd ../dockerfile
+          docker cp runner:$MOUNT_PATH/logs.tar.gz .
+          docker cp runner:$MOUNT_PATH/result.tar.gz .
+          tar xzvf logs.tar.gz
+          ls logs
+          cat logs/build.status
+          if [[ $(cat logs/test.status) == 1 ]]; then
+            echo "test_status=failure" >> $GITHUB_OUTPUT
+          fi
+          mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-logs.tar.gz
+          mv result.tar.gz glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-result.tar.gz
 
-      - name: Upload binary artifact
+      - name: Upload log artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}
+          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-logs
           path: |
-            riscv-gnu-toolchain/glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}.zip
-          retention-days: 5
+            dockerfile/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-logs.tar.gz
+          retention-days: 90
 
-      - name: Zip stage2
-        shell: bash
-        run: |
-          zip --symlinks -r stage2.zip build
-
-      - name: Upload stage2 artifact
+      - name: Upload result artifacts
+        if: ${{ steps.test-status.outputs.test_status != 'failure' }}
         uses: actions/upload-artifact@v3
         with:
-          name: glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}-stage2
+          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-results
           path: |
-            riscv-gnu-toolchain/stage2.zip
-          retention-days: 5
-    outputs:
-      glibcs: ${{ steps.to-build.outputs.glibcs }}
+            dockerfile/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-results.tar.gz
+          retention-days: 90
+      # - name: Make linux
+      #   run: |
+      #     cd build
+      #     make linux -j $(nproc)
+
+      # - name: Make qemu
+      #   run: |
+      #     cd build
+      #     make stamps/build-qemu -j $(nproc)
+
+      # - name: Output glibcs
+      #   id: to-build
+      #   run: |
+      #     cd build
+      #     TO_BUILD=$(ls --color=never -d build-glibc-linux-rv* | jq -R -s -c 'split("\n")[:-1]')
+      #     echo $TO_BUILD
+      #     echo "glibcs=$TO_BUILD" >> $GITHUB_OUTPUT
+
+      # - name: Zip binaries
+      #   run: |
+      #     zip -r glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}.zip build/bin
+
+      # - name: Upload binary artifact
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}
+      #     path: |
+      #       riscv-gnu-toolchain/glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}.zip
+      #     retention-days: 5
+
+      # - name: Zip stage2
+      #   shell: bash
+      #   run: |
+      #     zip --symlinks -r stage2.zip build
+
+      # - name: Upload stage2 artifact
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: glibc-linux-rv64gcv-lp64d-${{ steps.ehash.outputs.ehash }}-stage2
+      #     path: |
+      #       riscv-gnu-toolchain/stage2.zip
+      #     retention-days: 5
+    # outputs:
+      # glibcs: ${{ steps.to-build.outputs.glibcs }}
