@@ -9,10 +9,16 @@ on:
       baseline_hash:
         required: true
         type: string
-      patch_applied_glibchash:
+      patch_applied_:
         required: false
         type: string
+      target:
+        required: true
+        type: string
       issue_num:
+        required: true
+        type: string
+      test_comment_id:
         required: true
         type: string
       additional_info:
@@ -38,17 +44,17 @@ jobs:
 
       - name: Check baseline
         id: not-baseline
-        if: ${{ inputs.patch_name != '' && inputs.patch_applied_glibchash != '' }}
+        if: ${{ inputs.patch_name != '' && inputs.patch_applied_ != '' }}
         run: |
           echo "not_baseline=true" >> $GITHUB_OUTPUT
 
       - name: Effective hash
         id: ehash
         run: |
-          if [ '${{ inputs.patch_applied_glibchash }}' == '' ]; then
+          if [ '${{ inputs.patch_applied_ }}' == '' ]; then
             echo "ehash=${{inputs.baseline_hash}}" >> $GITHUB_OUTPUT
           else
-            echo "ehash=${{inputs.patch_applied_glibchash}}" >> $GITHUB_OUTPUT
+            echo "ehash=${{inputs.patch_applied_}}" >> $GITHUB_OUTPUT
           fi
 
       - name: Restore submodules from cache
@@ -102,7 +108,7 @@ jobs:
           if [[ $(cat logs/build.status) == 1 ]]; then
             echo "build_status=failure" >> $GITHUB_OUTPUT
           fi
-          mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-logs.tar.gz
+          mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-logs.tar.gz
 
       - name: test glibc
         if: ${{ steps.build-status.outputs.build_status != 'failure' }}
@@ -124,24 +130,24 @@ jobs:
           if [[ $(cat logs/test.status) == 1 ]]; then
             echo "test_status=failure" >> $GITHUB_OUTPUT
           fi
-          mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-logs.tar.gz
-          mv result.tar.gz glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-result.tar.gz
+          mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-logs.tar.gz
+          mv result.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-result.tar.gz
 
       - name: Upload log artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-logs
+          name: glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-logs
           path: |
-            dockerfile/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-logs.tar.gz
+            dockerfile/glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-logs.tar.gz
           retention-days: 90
 
       - name: Upload result artifacts
         if: ${{ steps.test-status.outputs.test_status != 'failure' }}
         uses: actions/upload-artifact@v3
         with:
-          name: glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-results
+          name: glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-results
           path: |
-            dockerfile/glibc-linux-${{ inputs.target }}-${{ inputs.glibchash }}-results.tar.gz
+            dockerfile/glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-results.tar.gz
           retention-days: 90
       # - name: Make linux
       #   run: |
