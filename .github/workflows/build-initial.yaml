@@ -9,7 +9,7 @@ on:
       baseline_hash:
         required: true
         type: string
-      patch_applied_:
+      patch_applied_glibchash:
         required: false
         type: string
       target:
