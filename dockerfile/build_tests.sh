@@ -8,7 +8,7 @@ cd build
 mkdir logs
 if [ "$2" == "rv32gcv-ilp32d" ];
 then
-  if ../configure CC="gcc -m32 " CXX="g++ -m32 " --prefix=$(pwd) --build=riscv64-unknown-linux-gnu > logs/config.log 2>&1
+  if ../configure CC="gcc -march=rv32gc " CXX="g++ -march=rv32gc " --prefix=$(pwd) --build=riscv64-unknown-linux-gnu > logs/config.log 2>&1
   then
     echo 0 > logs/config.status
   else
@@ -34,6 +34,8 @@ else
 fi
 
 cd ..
-tar czvf log.tar.gz build/logs
+pwd
+tar czvf logs.tar.gz build/logs
+ls
 
 exit 0

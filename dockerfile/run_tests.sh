@@ -32,5 +32,7 @@ done
 
 cd ..
 tar czvf result.tar.gz result/
-tar czvf log.tar.gz build/logs
+tar czvf logs.tar.gz build/logs
+pwd
+ls
 
