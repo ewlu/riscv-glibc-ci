@@ -101,7 +101,7 @@ jobs:
         id: build-status
         run: |
           cd ../dockerfile
-          docker cp runner:$MOUNT_PATH/logs.tar.gz .
+          docker cp runner:${{ steps.mount-path.outputs.mount_path }}/logs.tar.gz .
           tar xzvf logs.tar.gz
           ls logs
           cat logs/build.status
@@ -122,8 +122,8 @@ jobs:
         id: test-status
         run: |
           cd ../dockerfile
-          docker cp runner:$MOUNT_PATH/logs.tar.gz .
-          docker cp runner:$MOUNT_PATH/result.tar.gz .
+          docker cp runner:${{ steps.mount-path.outputs.mount_path }}/logs.tar.gz .
+          docker cp runner:${{ steps.mount-path.outputs.mount_path }}/result.tar.gz .
           tar xzvf logs.tar.gz
           ls logs
           cat logs/build.status
