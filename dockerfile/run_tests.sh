@@ -9,7 +9,10 @@ mkdir -p result/test_result_files
 cd build
 pwd
 
-if make check -j $(nproc) -k -O > logs/check.log 2>&1
+
+set +o pipefail
+make check -j $(nproc) -k -O 2>&1 | tee logs/check.log
+if [ $? == 0 ]
 then
   echo 0 > logs/check.status
 else
@@ -30,9 +33,12 @@ for file in $(find . -name "*.test_result"); do
   cp -r --parents $file ../result/test_result_files
 done
 
+set -o pipefail
+
 cd ..
 tar czvf result.tar.gz result/
 tar czvf logs.tar.gz build/logs
 pwd
 ls
 
+exit 0
