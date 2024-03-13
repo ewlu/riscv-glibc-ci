@@ -132,6 +132,7 @@ jobs:
           fi
           mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-logs.tar.gz
           mv result.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-result.tar.gz
+        continue-on-error: true
 
       - name: Upload log artifacts
         uses: actions/upload-artifact@v3
