@@ -131,7 +131,7 @@ jobs:
             echo "test_status=failure" >> $GITHUB_OUTPUT
           fi
           mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-logs.tar.gz
-          mv result.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-result.tar.gz
+          mv result.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-results.tar.gz
         continue-on-error: true
 
       - name: Upload log artifacts
