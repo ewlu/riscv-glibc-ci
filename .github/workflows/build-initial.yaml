@@ -126,8 +126,8 @@ jobs:
           docker cp runner:${{ steps.mount-path.outputs.mount_path }}/result.tar.gz .
           tar xzvf logs.tar.gz
           ls build/logs
-          cat build/logs/test.status
-          if [[ $(cat build/logs/test.status) == 1 ]]; then
+          cat build/logs/check.status
+          if [[ $(cat build/logs/check.status) == 1 ]]; then
             echo "test_status=failure" >> $GITHUB_OUTPUT
           fi
           mv logs.tar.gz glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-logs.tar.gz
