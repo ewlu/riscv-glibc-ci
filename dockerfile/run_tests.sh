@@ -11,6 +11,8 @@ pwd
 
 
 set +o pipefail
+find / -name libgcc_s.so.1 
+cp /usr/lib/riscv64-linux-gnu/libgcc_s.so.1 .
 make check -j $(nproc) -k -O 2>&1 | tee logs/check.log
 if [ $? == 0 ]
 then

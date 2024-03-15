@@ -44,17 +44,17 @@ jobs:
 
       - name: Check baseline
         id: not-baseline
-        if: ${{ inputs.patch_name != '' && inputs.patch_applied_ != '' }}
+        if: ${{ inputs.patch_name != '' && inputs.patch_applied_glibchash != '' }}
         run: |
           echo "not_baseline=true" >> $GITHUB_OUTPUT
 
       - name: Effective hash
         id: ehash
         run: |
-          if [ '${{ inputs.patch_applied_ }}' == '' ]; then
+          if [ '${{ inputs.patch_applied_glibchash }}' == '' ]; then
             echo "ehash=${{inputs.baseline_hash}}" >> $GITHUB_OUTPUT
           else
-            echo "ehash=${{inputs.patch_applied_}}" >> $GITHUB_OUTPUT
+            echo "ehash=${{inputs.patch_applied_glibchash}}" >> $GITHUB_OUTPUT
           fi
 
       - name: Restore submodules from cache
