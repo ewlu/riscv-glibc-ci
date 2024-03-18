@@ -81,6 +81,11 @@ jobs:
           # sudo apt-get install autoconf automake autotools-dev curl python3 python3-pip libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev ninja-build git cmake libglib2.0-dev jq
           sudo apt install qemu-user-static -y
 
+      - name: Set up buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and export
+
       - name: Build image
         id: mount-path
         run: |
@@ -150,6 +155,20 @@ jobs:
           path: |
             dockerfile/glibc-linux-${{ inputs.target }}-${{ steps.ehash.outputs.ehash }}-results.tar.gz
           retention-days: 90
+
+      - name: build and export
+        uses: docker/build-push-action@v5
+        working-director: dockerfile
+        with:
+          context: .
+          tags: tester:latest
+          outputs: type=docker,dest=./image.tar
+
+      - name: upload image
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker_image
+          path: dockerfile/image.tar
       # - name: Make linux
       #   run: |
       #     cd build
