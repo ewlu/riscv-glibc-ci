@@ -156,7 +156,7 @@ jobs:
 
       - name: build and export
         uses: docker/build-push-action@v5
-        working-director: dockerfile
+        working-directory: dockerfile
         with:
           context: .
           tags: tester:latest
