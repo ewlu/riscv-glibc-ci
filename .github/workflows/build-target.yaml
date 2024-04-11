@@ -12,9 +12,6 @@ on:
       build_only:
         required: true
         type: string
-      patch_applied_glibchash:
-        required: true
-        type: string
       tot_hash:
         required: true
         type: string
@@ -83,57 +80,57 @@ jobs:
       build_glibc_comment_id: ${{ steps.build-comment.outputs.comment-id }}
       test_glibc_comment_id: ${{ steps.test-comment.outputs.comment-id }}
 
-  build-many-glibcs: 
-    needs: [initialize-comments]
-    uses: ./.github/workflows/build-glibcs.yaml
-    with:
-      patch_name: ${{ inputs.patch_name }}
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
-      issue_num: ${{ inputs.issue_num }}
-      build_comment_id: ${{ needs.initialize-comments.outputs.build_glibc_comment_id }}
-      run_on_self_hosted: false
-      tot_hash: ${{ inputs.tot_hash }}
-      additional_info: ${{ inputs.additional_info }}
-    secrets: inherit
+  # build-many-glibcs: 
+  #   needs: [initialize-comments]
+  #   uses: ./.github/workflows/build-glibcs.yaml
+  #   with:
+  #     patch_name: ${{ inputs.patch_name }}
+  #     baseline_hash: ${{ inputs.baseline_hash }}
+  #     patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
+  #     issue_num: ${{ inputs.issue_num }}
+  #     build_comment_id: ${{ needs.initialize-comments.outputs.build_glibc_comment_id }}
+  #     run_on_self_hosted: false
+  #     tot_hash: ${{ inputs.tot_hash }}
+  #     additional_info: ${{ inputs.additional_info }}
+  #   secrets: inherit
 
-  build-glibc-linux-baseline:
-    needs: [initialize-comments]
-    uses: ./.github/workflows/build-initial.yaml
-    with:
-      patch_name: 
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: 
-      issue_num: ${{ inputs.issue_num }}
-      additional_info: ${{ inputs.additional_info }}
-    secrets: inherit
+  # build-glibc-linux-baseline:
+  #   needs: [initialize-comments]
+  #   uses: ./.github/workflows/build-initial.yaml
+  #   with:
+  #     patch_name: 
+  #     baseline_hash: ${{ inputs.baseline_hash }}
+  #     applying_patch: false
+  #     issue_num: ${{ inputs.issue_num }}
+  #     additional_info: ${{ inputs.additional_info }}
+  #   secrets: inherit
 
-  build-glibc-linux-applied:
-    needs: [initialize-comments]
-    uses: ./.github/workflows/build-initial.yaml
-    with:
-      patch_name: ${{ inputs.patch_name }}
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
-      issue_num: ${{ inputs.issue_num }}
-      additional_info: ${{ inputs.additional_info }}
-    secrets: inherit
+  # build-glibc-linux-applied:
+  #   needs: [initialize-comments]
+  #   uses: ./.github/workflows/build-initial.yaml
+  #   with:
+  #     patch_name: ${{ inputs.patch_name }}
+  #     baseline_hash: ${{ inputs.baseline_hash }}
+  #     applying_patch: false
+  #     issue_num: ${{ inputs.issue_num }}
+  #     additional_info: ${{ inputs.additional_info }}
+  #   secrets: inherit
 
   test-glibc-linux-baseline:
-    needs: [initialize-comments,build-glibc-linux-baseline]
+    # needs: [initialize-comments,build-glibc-linux-baseline]
+    needs: [initialize-comments]
     uses: ./.github/workflows/test-regression.yaml
     strategy:
       fail-fast: false
       matrix:
         target:
           [
-            rv32gcv-ilp32d,
-            rv64gcv-lp64d,
+            rv32gc-ilp32d,
+            rv64gc-lp64d,
           ]
     with:
       patch_name: 
       baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: 
       target: ${{ matrix.target }}
       issue_num: ${{ inputs.issue_num }}
       test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
@@ -141,20 +138,19 @@ jobs:
     secrets: inherit
 
   test-glibc-linux-applied:
-    needs: [initialize-comments,build-glibc-linux-applied]
+    needs: [initialize-comments]
     uses: ./.github/workflows/test-regression.yaml
     strategy:
       fail-fast: false
       matrix:
         target:
           [
-            rv32gcv-ilp32d,
-            rv64gcv-lp64d,
+            rv32gc-ilp32d,
+            rv64gc-lp64d,
           ]
     with:
       patch_name: ${{ inputs.patch_name }}
       baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
       target: ${{ matrix.target }}
       issue_num: ${{ inputs.issue_num }}
       test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}

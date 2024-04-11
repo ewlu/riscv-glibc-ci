@@ -12,9 +12,6 @@ on:
       baseline_hash:
         required: true
         type: string
-      patch_applied_glibchash:
-        required: false
-        type: string
       issue_num:
         required: true
         type: string
@@ -26,13 +23,12 @@ on:
         type: string
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-20.04
     environment: production
-    if: ${{ inputs.run_on_self_hosted != 'true' }}
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
     steps:
       - uses: actions/checkout@v3
 
@@ -41,61 +37,207 @@ jobs:
         with:
           free_up_space: true
 
-      - name: Restore submodules from cache
+      - name: Download patches artifact
         uses: actions/download-artifact@v3
+        if: ${{ inputs.patch_name != '' }}
         with:
-          name: glibc-sources-${{ inputs.baseline_hash }}
-          path: ./riscv-gnu-toolchain
+          name: ${{ inputs.patch_name }}-downloaded-patches
+          path: ./
 
-      - name: Restore submodules
+      - name: Extract patches
+        if: ${{ inputs.patch_name != '' }}
+        working-directory: ./
         run: |
-          rm -rf .git binutils dejagnu gcc gdb glibc newlib qemu
-          unzip cache.zip
-          rm -rf cache.zip
+          unzip ${{ inputs.patch_name }}-downloaded-patches.zip
 
-      - name: Check baseline
-        id: not-baseline
-        if: ${{ inputs.patch_name == '' }} && ${{ inputs.patch_applied_glibchash == '' }}
+      - name: Make rootfs
         run: |
-          echo "not_baseline=true" >> $GITHUB_OUTPUT
+          if [[ "${{ inputs.patch_name }}" != "" ]]; then
+            PATCH_DIR=$(pwd)/patches/
+          fi
+          MARCH=$(echo ${{ inputs.target }} | cut -d '-' -f 1)
+          MABI=$(echo ${{ inputs.target }} | cut -d '-' -f 2)
 
-      - name: Effective hash
-        id: ehash
+          # install dependencies
+          sudo apt update
+          sudo apt upgrade
+          wget https://launchpad.net/ubuntu/+archive/primary/+files/mmdebstrap_1.4.3-4_all.deb 
+          sudo apt install ./mmdebstrap_1.4.3-4_all.deb
+          sudo apt install genext2fs qemu-system-riscv64
+
+          # create rootfs
+          ./mkrootfs_rv64_ubuntu.sh filesystem.ext2
+          e2fsck -f filesystem.ext2
+          resize2fs filesystem.ext2 6G
+
+      - name: Apply and build
         run: |
-          if [ '${{ inputs.patch_applied_glibchash }}' == '' ]; then
-            echo "ehash=${{inputs.baseline_hash}}" >> $GITHUB_OUTPUT
+          qemu-system-riscv64 -nographic -m 10G -machine virt \
+          -kernel ./Image \
+          -append "root=/dev/vda rw console=ttyS0" \
+          -drive file=filesystem.ext2,format=raw,id=hd0 \
+          -device virtio-blk-device,drive=hd0 \
+          -bios default -cpu rv64
+
+      - name: Extract values
+        id: app-hash
+        run: |
+          mkdir mountdir
+          mkdir logs
+          sudo mount ./filesystem.ext2 mountdir
+          cp mountdir/src/glibc/build/*.log ./logs
+          cp mountdir/src/glibc/build/*.status ./logs
+          cd mountdir/src/glibc
+          PATCH_APPLIED_GLIBCHASH=$(git rev-parse HEAD)
+          cd ../../..
+          sudo umount mountdir
+          echo "patch_applied_glibchash=$PATCH_APPLIED_GLIBCHASH" >> $GITHUB_OUTPUTS
+      - name: Zip files
+        run: |
+          zip -r ${{ steps.app-hash.outputs.patch_applied_glibchash }}-logs.zip logs
+          zip ${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs.zip filesystem.ext2
+
+      - name: Upload rootfs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs-build
+          path: |
+            ./${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs.zip
+          retention-days: 5
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.app-hash.outputs.patch_applied_glibchash }}-logs
+          path: |
+            ./${{ steps.app-hash.outputs.patch_applied_glibchash }}-logs.zip
+          retention-days: 5
+
+      - name: Check test
+        id: build-pass
+        run: |
+          if [[ -f logs/build.status && $(cat logs/build.status) == 0 ]];
+          then
+            echo "build_passed=true" >> $GITHUB_OUTPUTS
           else
-            echo "ehash=${{inputs.applied_glibc_hash}}" >> $GITHUB_OUTPUT
+            echo "build_passed=false" >> $GITHUB_OUTPUTS
           fi
 
-      - name: Extract and apply patches
-        uses: ./.github/actions/extract-apply-patches-trunk-or-baseline
-        if: ${{ steps.not-baseline.outputs.not_baseline == 'true' }}
-        with:
-          patch_name: ${{ inputs.patch_name }}
-          baseline_hash: ${{ inputs.baseline_hash }}
-          build_only: ${{ inputs.build_only }}
-          tot_hash: ${{ inputs.tot_hash }}
+    outputs:
+      patch_applied_glibchash: ${{ steps.app-hash.outputs.patch_applied_glibchash }}
+      build_passed: ${{ steps.build-pass.outputs.build_passed }}
 
-      - name: Restore Stage2 Artifacts
-        uses: ./.github/actions/restore-stage-2
-        with:
-          mode: ${{ inputs.mode }}
-          target: ${{ inputs.target }}
-          glibchash: ${{ inputs.patch_applied_glibchash }}
-          multilib: ${{ inputs.multilib }}
 
-      - name: Replace allowlist
+  test:
+    runs-on: ubuntu-20.04
+    environment: production
+    needs: [build]
+    if: ${{ 'needs.build.outputs.build_passed' == 'true' }}
+    defaults:
+      run:
+        working-directory: ./
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup env
+        uses: ./.github/actions/common/setup-env
+        with:
+          free_up_space: true
+
+      - name: Download rootfs
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.build.outputs.patch_applied_glibchash }}-rootfs-build
+          path: ./
+
+      - name: Restore rootfs
         run: |
-          rm -rf test/
-          cp -r ../test/ .
+          unzip ${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs.zip
+          rm ${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs.zip
 
-      - name: Run Testsuite
-        uses: ./.github/actions/common/run-testsuite
+      - name: Run tests
+        run: |
+          qemu-system-riscv64 -nographic -m 10G -machine virt \
+          -kernel ./Image \
+          -append "root=/dev/vda rw console=ttyS0" \
+          -drive file=filesystem.ext2,format=raw,id=hd0 \
+          -device virtio-blk-device,drive=hd0 \
+          -bios default -cpu rv64
+
+      - name: Extract values
+        id: app-hash
+        run: |
+          mkdir mountdir
+          mkdir logs
+          sudo mount ./filesystem.ext2 mountdir
+          cp mountdir/src/glibc/build/*.log ./logs
+          cp mountdir/src/glibc/build/*.status ./logs
+          sudo umount mountdir
+
+      - name: Zip files
+        run: |
+          zip -r ${{ steps.app-hash.outputs.patch_applied_glibchash }}-logs.zip logs
+          zip ${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs.zip filesystem.ext2
+
+      - name: Upload rootfs
+        uses: actions/upload-artifact@v3
         with:
-          mode: ${{ inputs.mode }}
-          target: ${{ inputs.target }}
-          glibchash: ${{ inputs.patch_applied_glibchash }}
-          multilib: ${{ inputs.multilib }}
+          name: ${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs-test
+          path: |
+            ./${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs.zip
+          retention-days: 5
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.app-hash.outputs.patch_applied_glibchash }}-logs
+          path: |
+            ./${{ steps.app-hash.outputs.patch_applied_glibchash }}-logs.zip
+          retention-days: 5
+
+      # - name: Check baseline
+      #   id: not-baseline
+      #   if: ${{ inputs.patch_name == '' }} && ${{ inputs.patch_applied_glibchash == '' }}
+      #   run: |
+      #     echo "not_baseline=true" >> $GITHUB_OUTPUT
+
+      # - name: Effective hash
+      #   id: ehash
+      #   run: |
+      #     if [ '${{ inputs.patch_applied_glibchash }}' == '' ]; then
+      #       echo "ehash=${{inputs.baseline_hash}}" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "ehash=${{inputs.applied_glibc_hash}}" >> $GITHUB_OUTPUT
+      #     fi
+
+      # - name: Extract and apply patches
+      #   uses: ./.github/actions/extract-apply-patches-trunk-or-baseline
+      #   if: ${{ steps.not-baseline.outputs.not_baseline == 'true' }}
+      #   with:
+      #     patch_name: ${{ inputs.patch_name }}
+      #     baseline_hash: ${{ inputs.baseline_hash }}
+      #     build_only: ${{ inputs.build_only }}
+      #     tot_hash: ${{ inputs.tot_hash }}
+
+      # - name: Restore Stage2 Artifacts
+      #   uses: ./.github/actions/restore-stage-2
+      #   with:
+      #     mode: ${{ inputs.mode }}
+      #     target: ${{ inputs.target }}
+      #     glibchash: ${{ inputs.patch_applied_glibchash }}
+      #     multilib: ${{ inputs.multilib }}
+
+      # - name: Replace allowlist
+      #   run: |
+      #     rm -rf test/
+      #     cp -r ../test/ .
+
+      # - name: Run Testsuite
+      #   uses: ./.github/actions/common/run-testsuite
+      #   with:
+      #     mode: ${{ inputs.mode }}
+      #     target: ${{ inputs.target }}
+      #     glibchash: ${{ inputs.patch_applied_glibchash }}
+      #     multilib: ${{ inputs.multilib }}
 
 
