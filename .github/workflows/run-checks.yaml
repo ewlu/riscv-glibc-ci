@@ -15,7 +15,7 @@ on:
 
 jobs:
   download_patches:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: riscv-gnu-toolchain
@@ -70,7 +70,7 @@ jobs:
 
   create-issue:
     needs: [download_patches]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
       issues: write
     defaults:
@@ -175,7 +175,7 @@ jobs:
 
   # apply:
   #   needs: [download_patches, create-issue]
-  #   runs-on: ubuntu-20.04
+  #   runs-on: ubuntu-22.04
   #   environment: production
   #   defaults:
   #     run:
@@ -367,5 +367,6 @@ jobs:
       build_only: ${{ needs.apply.outputs.build_only }}
       tot_hash: ${{ inputs.tot_hash }}
       issue_num: ${{ needs.create-issue.outputs.issue_num }}
+      apply_comment_id: ${{ needs.create-issue.outputs.apply_comment_id }}
       additional_info: ${{ needs.create-issue.outputs.additional_info }}
     secrets: inherit

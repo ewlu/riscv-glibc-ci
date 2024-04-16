@@ -18,13 +18,39 @@ on:
       issue_num:
         required: true
         type: string
+      apply_comment_id:
+        required: true
+        type: string
       additional_info:
         required: true
         type: string
 
 jobs:
+  make-rootfs-applied:
+    uses: ./.github/workflows/build-rootfs.yaml
+    with:
+      patch_name: ${{ inputs.patch_name }}
+      baseline_hash: ${{ inputs.baseline_hash }}
+      target_type: 'applied'
+      apply_comment_id: ${{ inputs.apply_comment_id }}
+      additional_info: ${{ inputs.additional_info }}
+    secrets: inherit
+
+  make-rootfs-baseline:
+    if: ${{ needs.make-rootfs-applied.outputs.early_exit != 'true' }}
+    uses: ./.github/workflows/build-rootfs.yaml
+    with:
+      patch_name: 
+      baseline_hash: ${{ inputs.baseline_hash }}
+      target_type: 'baseline'
+      apply_comment_id: ${{ inputs.apply_comment_id }}
+      additional_info: ${{ inputs.additional_info }}
+    secrets: inherit
+
   initialize-comments:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    needs: [make-rootfs-applied]
+    if: ${{ needs.make-rootfs-applied.outputs.early_exit != 'true' }}
     defaults:
       run:
         working-directory: riscv-gnu-toolchain
@@ -94,31 +120,11 @@ jobs:
   #     additional_info: ${{ inputs.additional_info }}
   #   secrets: inherit
 
-  # build-glibc-linux-baseline:
-  #   needs: [initialize-comments]
-  #   uses: ./.github/workflows/build-initial.yaml
-  #   with:
-  #     patch_name: 
-  #     baseline_hash: ${{ inputs.baseline_hash }}
-  #     applying_patch: false
-  #     issue_num: ${{ inputs.issue_num }}
-  #     additional_info: ${{ inputs.additional_info }}
-  #   secrets: inherit
 
-  # build-glibc-linux-applied:
-  #   needs: [initialize-comments]
-  #   uses: ./.github/workflows/build-initial.yaml
-  #   with:
-  #     patch_name: ${{ inputs.patch_name }}
-  #     baseline_hash: ${{ inputs.baseline_hash }}
-  #     applying_patch: false
-  #     issue_num: ${{ inputs.issue_num }}
-  #     additional_info: ${{ inputs.additional_info }}
-  #   secrets: inherit
 
   test-glibc-linux-baseline:
-    # needs: [initialize-comments,build-glibc-linux-baseline]
-    needs: [initialize-comments]
+    needs: [initialize-comments,make-rootfs-baseline]
+    # needs: [initialize-comments]
     uses: ./.github/workflows/test-regression.yaml
     strategy:
       fail-fast: false
@@ -130,15 +136,17 @@ jobs:
           ]
     with:
       patch_name: 
-      baseline_hash: ${{ inputs.baseline_hash }}
+      glibchash: ${{ needs.make-rootfs-baseline.outputs.patch_applied_glibchash }}
       target: ${{ matrix.target }}
       issue_num: ${{ inputs.issue_num }}
       test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
       additional_info: ${{ inputs.additional_info }}
+      target_type: 'baseline'
     secrets: inherit
 
   test-glibc-linux-applied:
-    needs: [initialize-comments]
+    needs: [initialize-comments,make-rootfs-applied]
+    # needs: [initialize-comments]
     uses: ./.github/workflows/test-regression.yaml
     strategy:
       fail-fast: false
@@ -150,11 +158,12 @@ jobs:
           ]
     with:
       patch_name: ${{ inputs.patch_name }}
-      baseline_hash: ${{ inputs.baseline_hash }}
+      glibchash: ${{ needs.make-rootfs-applied.outputs.patch_applied_glibchash }}
       target: ${{ matrix.target }}
       issue_num: ${{ inputs.issue_num }}
       test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
       additional_info: ${{ inputs.additional_info }}
+      target_type: 'applied'
     secrets: inherit
 
 

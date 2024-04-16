@@ -27,10 +27,13 @@ packages=(
         strace
         libidn2-0
         patchelf
+        sudo
 )
 packages=$(IFS=, && echo "${packages[*]}")
 
-mmdebstrap --include="$packages" \
+echo "MARCH = $MARCH MABI = $MABI"
+
+MARCH=$MARCH MABI=$MABI mmdebstrap --include="$packages" \
            --variant=minbase \
            --architecture=riscv64 \
            --components="main restricted multiverse universe" \

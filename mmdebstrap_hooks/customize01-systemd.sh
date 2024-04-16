@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-set -euo pipefail
+set -eo pipefail
 
 d=$(dirname "${BASH_SOURCE[0]}")
 
@@ -24,7 +24,6 @@ EOF
 
 cat >"$1/root/.profile" <<"EOF"
 # Poor man's SysV init ;-)
-set -x
 echo "booted"
 EOF
 
