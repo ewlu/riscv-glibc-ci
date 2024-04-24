@@ -5,7 +5,7 @@
 
 # Builds an RV64 Ubuntu rootfs.
 
-set -euo pipefail
+set -eo pipefail
 
 d=$(dirname "${BASH_SOURCE[0]}")
 

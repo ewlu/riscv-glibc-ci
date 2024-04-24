@@ -62,9 +62,6 @@ jobs:
           if [[ "${{ inputs.patch_name }}" != "" ]]; then
             export PATCH_DIR=$(pwd)/patches/
           fi
-          export MARCH=$(echo ${{ inputs.target }} | cut -d '-' -f 1)
-          export MABI=$(echo ${{ inputs.target }} | cut -d '-' -f 2)
-
 
           # install dependencies
           sudo apt update
