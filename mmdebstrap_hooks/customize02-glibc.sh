@@ -18,6 +18,7 @@ then
   echo "======================================="
   echo "applying patches"
   cd $1/home/tester/tests/glibc
+  git checkout $BASELINE_HASH
   git config user.name "Bot"
   git config user.email "<>"
   git am $PATCH_DIR/*.patch --whitespace=fix -q --3way --empty=drop &> $HASH_DIR/apply.log || true

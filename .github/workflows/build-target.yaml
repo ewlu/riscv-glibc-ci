@@ -12,9 +12,6 @@ on:
       build_only:
         required: true
         type: string
-      tot_hash:
-        required: true
-        type: string
       issue_num:
         required: true
         type: string
@@ -36,24 +33,13 @@ jobs:
       additional_info: ${{ inputs.additional_info }}
     secrets: inherit
 
-  make-rootfs-baseline:
-    if: ${{ needs.make-rootfs-applied.outputs.early_exit != 'true' }}
-    uses: ./.github/workflows/build-rootfs.yaml
-    with:
-      patch_name: 
-      baseline_hash: ${{ inputs.baseline_hash }}
-      target_type: 'baseline'
-      apply_comment_id: ${{ inputs.apply_comment_id }}
-      additional_info: ${{ inputs.additional_info }}
-    secrets: inherit
-
   initialize-comments:
     runs-on: ubuntu-22.04
     needs: [make-rootfs-applied]
     if: ${{ needs.make-rootfs-applied.outputs.early_exit != 'true' }}
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
     steps:
       - uses: actions/checkout@v3
 
@@ -66,7 +52,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.patch_name }}-downloaded-patches
-          path: ./riscv-gnu-toolchain
+          path: ./
 
       - name: Extract patches
         run: |
@@ -84,7 +70,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           issue-number: ${{ inputs.issue_num }}
-          body-path: riscv-gnu-toolchain/build_pending_comment.md
+          body-path: ./build_pending_comment.md
           edit-mode: replace
 
       - name: Create build pending comment
@@ -99,7 +85,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           issue-number: ${{ inputs.issue_num }}
-          body-path: riscv-gnu-toolchain/test_pending_comment.md
+          body-path: ./test_pending_comment.md
           edit-mode: replace
 
     outputs:
@@ -121,22 +107,21 @@ jobs:
   #   secrets: inherit
 
 
-
   test-glibc-linux-baseline:
-    needs: [initialize-comments,make-rootfs-baseline]
-    # needs: [initialize-comments]
+    # needs: [initialize-comments,make-rootfs-baseline]
+    needs: [initialize-comments]
     uses: ./.github/workflows/test-regression.yaml
     strategy:
       fail-fast: false
       matrix:
         target:
           [
-            rv32gc-ilp32d,
+            # rv32gc-ilp32d,
             rv64gc-lp64d,
           ]
     with:
       patch_name: 
-      glibchash: ${{ needs.make-rootfs-baseline.outputs.patch_applied_glibchash }}
+      glibchash: ${{ inputs.baseline_hash }}
       target: ${{ matrix.target }}
       issue_num: ${{ inputs.issue_num }}
       test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
@@ -153,7 +138,7 @@ jobs:
       matrix:
         target:
           [
-            rv32gc-ilp32d,
+            # rv32gc-ilp32d,
             rv64gc-lp64d,
           ]
     with:
@@ -254,7 +239,7 @@ jobs:
 
   # summarize:
   #   if: "!cancelled()" # Generate github issues even when some (or all) targets fail to build
-  #   needs: [initialize-comments, creg, cmreg, creg-sh]
+  #   needs: [make-rootfs-applied,initialize-comments,test-glibc-linux-applied,test-glibc-linux-baseline]
   #   permissions:
   #     issues: write
   #   uses: ./.github/workflows/generate-precommit-summary.yaml

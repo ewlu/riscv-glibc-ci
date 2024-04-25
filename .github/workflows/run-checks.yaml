@@ -9,16 +9,13 @@ on:
       baseline_hash: # Baseline glibc
         required: true
         type: string
-      tot_hash: # Tip of tree glibc
-        required: true
-        type: string
 
 jobs:
   download_patches:
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
     steps:
       - uses: actions/checkout@v3
 
@@ -31,13 +28,13 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: patch_urls
-          path: ./riscv-gnu-toolchain
+          path: ./
 
       - name: Download patchworks urls artifact
         uses: actions/download-artifact@v3
         with:
           name: patchworks_metadata_files
-          path: ./riscv-gnu-toolchain
+          path: ./
 
       - name: Extract patch urls
         run: |
@@ -65,7 +62,7 @@ jobs:
         with:
           name: ${{ inputs.patch_name }}-downloaded-patches
           path: |
-            riscv-gnu-toolchain/${{ inputs.patch_name }}-downloaded-patches.zip
+            ./${{ inputs.patch_name }}-downloaded-patches.zip
           retention-days: 90
 
   create-issue:
@@ -75,7 +72,7 @@ jobs:
       issues: write
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
     steps:
       - uses: actions/checkout@v3
 
@@ -88,7 +85,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.patch_name }}-downloaded-patches
-          path: ./riscv-gnu-toolchain
+          path: ./
 
       - name: Extract patches
         run: |
@@ -111,7 +108,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          content-filepath: riscv-gnu-toolchain/issue.md
+          content-filepath: ./issue.md
           title: 'Patch Status ${{ inputs.patch_name }}'
 
       - name: Build additional info link
@@ -141,7 +138,7 @@ jobs:
 
       - name: Create apply pending report
         run: |
-          python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -thash ${{ inputs.tot_hash }} -bstatus pending -tstatus pending -o comment.md
+          python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -bstatus pending -o comment.md
           printf "\n[Additional information](${{ steps.link.outputs.additional }})\n" >> comment.md
 
       - name: Create apply report comment
@@ -151,7 +148,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           issue-number: ${{ steps.create-issue.outputs.issue-number }}
-          body-path: riscv-gnu-toolchain/comment.md
+          body-path: ./comment.md
           edit-mode: replace
 
     outputs:
@@ -365,7 +362,6 @@ jobs:
       patch_name: ${{ inputs.patch_name }}
       baseline_hash: ${{ inputs.baseline_hash }}
       build_only: ${{ needs.apply.outputs.build_only }}
-      tot_hash: ${{ inputs.tot_hash }}
       issue_num: ${{ needs.create-issue.outputs.issue_num }}
       apply_comment_id: ${{ needs.create-issue.outputs.apply_comment_id }}
       additional_info: ${{ needs.create-issue.outputs.additional_info }}

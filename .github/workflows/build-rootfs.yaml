@@ -62,6 +62,7 @@ jobs:
           if [[ "${{ inputs.patch_name }}" != "" ]]; then
             export PATCH_DIR=$(pwd)/patches/
           fi
+          export BASELINE_HASH=${{ inputs.baseline_hash }}
 
           # install dependencies
           sudo apt update
@@ -99,6 +100,13 @@ jobs:
           if [ $(cat trimmed_comment.md | wc -l) -ne $(cat comment.md | wc -l) ]; then printf "\n\`\`\`\nComment text has been trimmed. Please check logs for the untrimmed comment." >> trimmed_comment.md; fi
           printf "\n[Additional information](${{ inputs.additional_info }})\n" >> trimmed_comment.md
 
+      - name: Get applied hash
+        id: app-hash
+        if: ${{ steps.early-exit.outputs.early_exit != 'true' }}
+        run: |
+          PATCH_APPLIED_HASH=$(cat ./hash_output/applied_hash.txt)
+          echo "patch_applied_glibchash=$PATCH_APPLIED_HASH" >> $GITHUB_OUTPUT
+
       - name: Update apply report comment
         uses: peter-evans/create-or-update-comment@v3
         if: ${{ inputs.patch_name != '' && inputs.target == 'rv64gc-lp64d' }}
@@ -109,25 +117,6 @@ jobs:
           comment-id: ${{ inputs.apply_comment_id }}
           body-path: ./trimmed_comment.md
           edit-mode: replace
-
-      - name: Get applied hash
-        id: app-hash
-        if: ${{ steps.early-exit.outputs.early_exit != 'true' }}
-        run: |
-          PATCH_APPLIED_HASH=$(cat ./hash_output/applied_hash.txt)
-          echo "patch_applied_glibchash=$PATCH_APPLIED_HASH" >> $GITHUB_OUTPUT
-
-      # - name: Zip files
-      #   run: |
-      #     zip ${{ inputs.target_type }}-${{ inputs.target }}-${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs.zip filesystem.ext2
-      #
-      # - name: Upload rootfs
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: ${{ inputs.target_type }}-${{ inputs.target }}-${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs-init
-      #     path: |
-      #       ./${{ inputs.target_type }}-${{ inputs.target }}-${{ steps.app-hash.outputs.patch_applied_glibchash }}-rootfs.zip
-      #     retention-days: 5
 
     outputs:
       early_exit: ${{ steps.early-exit.outputs.early_exit }}

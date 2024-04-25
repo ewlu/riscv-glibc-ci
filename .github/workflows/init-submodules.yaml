@@ -14,76 +14,72 @@ on:
         type: string
     outputs:
         baseline_hash:
-          value: ${{ jobs.init-submodules.outputs.tot_hash }}
-        tot_hash:
-          value: ${{ jobs.init-submodules.outputs.tot_hash }}
+          value: ${{ jobs.init-submodules.outputs.baseline_hash }}
 
 jobs:
   init-submodules:
     runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Clone riscv-gnu-toolchain
+      - name: Clone glibc
         working-directory: ./
         run: |
-          git submodule update --init riscv-gnu-toolchain
-          git submodule update --init glibc-cicd
+          git submodule update --init glibc
 
-      - name: Retrieve cache
-        id: retrieve-cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            riscv-gnu-toolchain/.git
-            riscv-gnu-toolchain/glibc
-          key: submodules-archive-1 # Numbered archive to allow for easy transition when bumping submodules
+      # - name: Retrieve cache
+      #   id: retrieve-cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       riscv-gnu-toolchain/.git
+      #       riscv-gnu-toolchain/glibc
+      #     key: submodules-archive-1 # Numbered archive to allow for easy transition when bumping submodules
+      #
+      # - name: Initalize submodules cache
+      #   if: steps.retrieve-cache.outputs.cache-hit != 'true'
+      #   run: |
+      #     rm -rf glibc
+      #     git clone https://sourceware.org/git/glibc.git
 
-      - name: Initalize submodules cache
-        if: steps.retrieve-cache.outputs.cache-hit != 'true'
-        run: |
-          rm -rf glibc
-          git clone https://sourceware.org/git/glibc.git
-
-      - name: Determine tip-of-tree hash
-        working-directory: riscv-gnu-toolchain/glibc
-        id: tot-hash
+      - name: Determine baseline
+        working-directory: ./glibc
+        id: baseline-hash
         run: |
           git checkout master
           git pull
-          if [ '${{ inputs.tot_hash }}' != '' ]; then git checkout ${{ inputs.tot_hash }}; fi
-          export TOT_HASH=$(git rev-parse HEAD)
-          echo $TOT_HASH
-          echo "tot_hash=$TOT_HASH" >> $GITHUB_OUTPUT
+          if [ '${{ inputs.baseline_hash }}' != '' ]; then git checkout ${{ inputs.baseline_hash }}; fi
+          export BASELINE_HASH=$(git rev-parse HEAD)
+          echo $BASELINE_HASH
+          echo "baseline_hash=$BASELINE_HASH" >> $GITHUB_OUTPUT
 
-      - name: Cache submodules
-        if: steps.retrieve-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v3
-        with:
-          path: |
-            riscv-gnu-toolchain/.git
-            riscv-gnu-toolchain/glibc
-          key: submodules-archive-1
-
-      - name: Make cache zip
-        run: |
-          zip -r cache.zip .git glibc
+      # - name: Cache submodules
+      #   if: steps.retrieve-cache.outputs.cache-hit != 'true'
+      #   uses: actions/cache/save@v3
+      #   with:
+      #     path: |
+      #       riscv-gnu-toolchain/.git
+      #       riscv-gnu-toolchain/glibc
+      #     key: submodules-archive-1
+      #
+      # - name: Make cache zip
+      #   run: |
+      #     zip -r cache.zip .git glibc
 
       # Use artifact rather than cache since cache downloads are flaky/hang.
       # Artifacts are reliable but ~30 min slower to set up.
       # Setup is done on one runner, so this isn't a show stopper.
-      - name: Upload git cache
-        uses: actions/upload-artifact@v3
-        with:
-          name: glibc-sources-${{ steps.tot-hash.outputs.tot_hash }}
-          path: |
-            riscv-gnu-toolchain/cache.zip
-          retention-days: 5
+      # - name: Upload git cache
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: glibc-sources-${{ steps.tot-hash.outputs.tot_hash }}
+      #     path: |
+      #       riscv-gnu-toolchain/cache.zip
+      #     retention-days: 5
 
     outputs:
-      baseline_hash: ${{ steps.tot-hash.outputs.tot_hash }}
-      tot_hash: ${{ steps.tot-hash.outputs.tot_hash }}
+      baseline_hash: ${{ steps.baseline-hash.outputs.baseline_hash }}

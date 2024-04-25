@@ -27,7 +27,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     environment: production
     defaults:
       run:
@@ -38,7 +38,7 @@ jobs:
       - name: Setup env
         uses: ./.github/actions/common/setup-env
         with:
-          free_up_space: true
+          free_up_space: false
 
       - name: Download patches artifact
         uses: actions/download-artifact@v3
@@ -74,6 +74,7 @@ jobs:
           fi
           export MARCH=$(echo ${{ inputs.target }} | cut -d '-' -f 1)
           export MABI=$(echo ${{ inputs.target }} | cut -d '-' -f 2)
+          export BASELINE_HASH=${{ inputs.baseline_hash }}
 
 
           # install dependencies
@@ -156,7 +157,7 @@ jobs:
 
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     environment: production
     needs: [build]
     if: ${{ needs.build.outputs.build_passed == 'true' }}
@@ -169,7 +170,7 @@ jobs:
       - name: Setup env
         uses: ./.github/actions/common/setup-env
         with:
-          free_up_space: true
+          free_up_space: false
 
       - name: Download rootfs
         uses: actions/download-artifact@v3
@@ -204,6 +205,16 @@ jobs:
             sudo cp $file ./logs
           done
           sudo umount mountdir
+          cp ./logs/*-report.log ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
+          ls
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
+          path: |
+            ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
+          retention-days: 90
 
       - name: Zip files
         run: |

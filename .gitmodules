@@ -1,6 +1,6 @@
 [submodule "riscv-gnu-toolchain"]
 	path = riscv-gnu-toolchain
 	url = https://github.com/patrick-rivos/riscv-gnu-toolchain.git
-[submodule "glibc-cicd"]
-	path = glibc-cicd
-	url = https://gitlab.com/ewlu/glibc-cicd.git
+[submodule "glibc"]
+	path = glibc
+	url = https://sourceware.org/git/glibc.git
