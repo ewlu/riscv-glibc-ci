@@ -9,16 +9,13 @@ on:
       baseline_hash: # Baseline glibc
         required: true
         type: string
-      tot_hash: # Tip of tree glibc
-        required: true
-        type: string
 
 jobs:
   download_patches:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
     steps:
       - uses: actions/checkout@v3
 
@@ -27,29 +24,17 @@ jobs:
         with:
           free_up_space: false
 
-      - name: Restore submodules from cache
-        uses: actions/download-artifact@v3
-        with:
-          name: glibc-sources-${{ inputs.baseline_hash }}
-          path: ./riscv-gnu-toolchain
-
-      - name: Restore submodules
-        run: |
-          rm -rf .git binutils dejagnu gcc gdb glibc newlib qemu
-          unzip cache.zip
-          rm -rf cache.zip
-
       - name: Download patch urls artifact
         uses: actions/download-artifact@v3
         with:
           name: patch_urls
-          path: ./riscv-gnu-toolchain
+          path: ./
 
       - name: Download patchworks urls artifact
         uses: actions/download-artifact@v3
         with:
           name: patchworks_metadata_files
-          path: ./riscv-gnu-toolchain
+          path: ./
 
       - name: Extract patch urls
         run: |
@@ -77,17 +62,17 @@ jobs:
         with:
           name: ${{ inputs.patch_name }}-downloaded-patches
           path: |
-            riscv-gnu-toolchain/${{ inputs.patch_name }}-downloaded-patches.zip
+            ./${{ inputs.patch_name }}-downloaded-patches.zip
           retention-days: 90
 
   create-issue:
     needs: [download_patches]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     permissions:
       issues: write
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
     steps:
       - uses: actions/checkout@v3
 
@@ -100,7 +85,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.patch_name }}-downloaded-patches
-          path: ./riscv-gnu-toolchain
+          path: ./
 
       - name: Extract patches
         run: |
@@ -123,7 +108,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          content-filepath: riscv-gnu-toolchain/issue.md
+          content-filepath: ./issue.md
           title: 'Patch Status ${{ inputs.patch_name }}'
 
       - name: Build additional info link
@@ -153,7 +138,7 @@ jobs:
 
       - name: Create apply pending report
         run: |
-          python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -thash ${{ inputs.tot_hash }} -bstatus pending -tstatus pending -o comment.md
+          python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -bstatus pending -o comment.md
           printf "\n[Additional information](${{ steps.link.outputs.additional }})\n" >> comment.md
 
       - name: Create apply report comment
@@ -163,7 +148,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           issue-number: ${{ steps.create-issue.outputs.issue-number }}
-          body-path: riscv-gnu-toolchain/comment.md
+          body-path: ./comment.md
           edit-mode: replace
 
     outputs:
@@ -185,177 +170,177 @@ jobs:
   #     baseline_hash: ${{ inputs.baseline_hash }}
   #   secrets: inherit
 
-  apply:
-    needs: [download_patches, create-issue]
-    runs-on: ubuntu-20.04
-    environment: production
-    defaults:
-      run:
-        working-directory: riscv-gnu-toolchain
-    steps:
-      - uses: actions/checkout@v3
+  # apply:
+  #   needs: [download_patches, create-issue]
+  #   runs-on: ubuntu-22.04
+  #   environment: production
+  #   defaults:
+  #     run:
+  #       working-directory: riscv-gnu-toolchain
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Setup env
-        uses: ./.github/actions/common/setup-env
-        with:
-          free_up_space: false
+  #     - name: Setup env
+  #       uses: ./.github/actions/common/setup-env
+  #       with:
+  #         free_up_space: false
 
-      - name: Restore submodules from cache
-        uses: actions/download-artifact@v3
-        with:
-          name: glibc-sources-${{ inputs.baseline_hash }}
-          path: ./riscv-gnu-toolchain
+  #     - name: Restore submodules from cache
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: glibc-sources-${{ inputs.baseline_hash }}
+  #         path: ./riscv-gnu-toolchain
 
-      - name: Restore submodules
-        run: |
-          rm -rf .git binutils dejagnu gcc gdb glibc newlib qemu
-          unzip cache.zip
-          rm -rf cache.zip
+  #     - name: Restore submodules
+  #       run: |
+  #         rm -rf .git binutils dejagnu gcc gdb glibc newlib qemu
+  #         unzip cache.zip
+  #         rm -rf cache.zip
 
-      - name: Download patches artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.patch_name }}-downloaded-patches
-          path: ./riscv-gnu-toolchain
+  #     - name: Download patches artifact
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: ${{ inputs.patch_name }}-downloaded-patches
+  #         path: ./riscv-gnu-toolchain
 
-      - name: Extract patches
-        run: |
-          unzip ${{ inputs.patch_name }}-downloaded-patches.zip
+  #     - name: Extract patches
+  #       run: |
+  #         unzip ${{ inputs.patch_name }}-downloaded-patches.zip
 
-      - name: Checkout glibc hash
-        run: |
-          cd glibc
-          git fetch
-          git checkout ${{ inputs.baseline_hash }}
+  #     - name: Checkout glibc hash
+  #       run: |
+  #         cd glibc
+  #         git fetch
+  #         git checkout ${{ inputs.baseline_hash }}
 
-      - name: Apply patches to baseline
-        id: apply-baseline
-        run: |
-          cd glibc
-          git config user.name "GitHub Actions Bot"
-          git config user.email "<>"
-          git am ../patches/*.patch --whitespace=fix -q --3way --empty=drop &> out_base || true
-          cat out_base
-          if [[ $(cat out_base | wc -l) != 0 ]]; then
-            git am --show-current-patch=diff
-            echo "Failed to apply patch cleanly to baseline hash"
-            echo "\`\`\`" >> out_base
-            git am --show-current-patch=diff &>> out_base
-            echo "\`\`\`" >> out_base
-            git am --abort
-            echo "apply_baseline=false" >> $GITHUB_OUTPUT
-          else
-            echo "apply_baseline=true" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
+  #     - name: Apply patches to baseline
+  #       id: apply-baseline
+  #       run: |
+  #         cd glibc
+  #         git config user.name "GitHub Actions Bot"
+  #         git config user.email "<>"
+  #         git am ../patches/*.patch --whitespace=fix -q --3way --empty=drop &> out_base || true
+  #         cat out_base
+  #         if [[ $(cat out_base | wc -l) != 0 ]]; then
+  #           git am --show-current-patch=diff
+  #           echo "Failed to apply patch cleanly to baseline hash"
+  #           echo "\`\`\`" >> out_base
+  #           git am --show-current-patch=diff &>> out_base
+  #           echo "\`\`\`" >> out_base
+  #           git am --abort
+  #           echo "apply_baseline=false" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "apply_baseline=true" >> $GITHUB_OUTPUT
+  #         fi
+  #       continue-on-error: true
 
-      - name: Apply patches to tip of tree
-        id: apply-tip-of-tree
-        run: |
-          cd glibc
-          git reset --hard ${{ inputs.tot_hash }}
-          git am ../patches/*.patch --whitespace=fix -q --3way --empty=drop &> out_tot || true
-          cat out_tot
-          if [[ $(cat out_tot | wc -l) != 0 ]]; then
-            git am --show-current-patch=diff
-            echo "Failed to apply patch cleanly to tip of tree"
-            git am --show-current-patch=diff &>> out_tot
-            git am --abort
-            echo "apply_tot=false" >> $GITHUB_OUTPUT
-          else
-            echo "apply_tot=true" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
+  #     - name: Apply patches to tip of tree
+  #       id: apply-tip-of-tree
+  #       run: |
+  #         cd glibc
+  #         git reset --hard ${{ inputs.tot_hash }}
+  #         git am ../patches/*.patch --whitespace=fix -q --3way --empty=drop &> out_tot || true
+  #         cat out_tot
+  #         if [[ $(cat out_tot | wc -l) != 0 ]]; then
+  #           git am --show-current-patch=diff
+  #           echo "Failed to apply patch cleanly to tip of tree"
+  #           git am --show-current-patch=diff &>> out_tot
+  #           git am --abort
+  #           echo "apply_tot=false" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "apply_tot=true" >> $GITHUB_OUTPUT
+  #         fi
+  #       continue-on-error: true
 
-      - name: Check build only
-        id: build-only
-        if: ${{ steps.apply-baseline.outputs.apply_baseline == 'false' && steps.apply-tip-of-tree.outputs.apply_tot == 'true' }}
-        run: |
-          echo "build_only=true" >> $GITHUB_OUTPUT
+  #     - name: Check build only
+  #       id: build-only
+  #       if: ${{ steps.apply-baseline.outputs.apply_baseline == 'false' && steps.apply-tip-of-tree.outputs.apply_tot == 'true' }}
+  #       run: |
+  #         echo "build_only=true" >> $GITHUB_OUTPUT
 
-      - name: Check early exit
-        id: early-exit
-        if: ${{ steps.apply-baseline.outputs.apply_baseline == 'false' && steps.apply-tip-of-tree.outputs.apply_tot == 'false' }}
-        run: |
-          echo "early_exit=true" >> $GITHUB_OUTPUT
+  #     - name: Check early exit
+  #       id: early-exit
+  #       if: ${{ steps.apply-baseline.outputs.apply_baseline == 'false' && steps.apply-tip-of-tree.outputs.apply_tot == 'false' }}
+  #       run: |
+  #         echo "early_exit=true" >> $GITHUB_OUTPUT
 
-      - name: Add Build-Only Label to issue
-        if: ${{ steps.build-only.outputs.build_only == 'true' }}
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.addLabels({
-              issue_number: ${{ needs.create-issue.outputs.issue_num }},
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ['build-only']
-            })
+  #     - name: Add Build-Only Label to issue
+  #       if: ${{ steps.build-only.outputs.build_only == 'true' }}
+  #       uses: actions/github-script@v6
+  #       with:
+  #         script: |
+  #           github.rest.issues.addLabels({
+  #             issue_number: ${{ needs.create-issue.outputs.issue_num }},
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             labels: ['build-only']
+  #           })
 
-      - name: Build apply report
-        run: |
-          python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -thash ${{ inputs.tot_hash }} -bstatus ${{ steps.apply-baseline.outputs.apply_baseline }} -tstatus ${{ steps.apply-tip-of-tree.outputs.apply_tot }} -o comment.md
-          head -c 65000 comment.md > trimmed_comment.md
-          if [ $(cat trimmed_comment.md | wc -l) -ne $(cat comment.md | wc -l) ]; then printf "\n\`\`\`\nComment text has been trimmed. Please check logs for the untrimmed comment." >> trimmed_comment.md; fi
-          printf "\n[Additional information](${{ needs.create-issue.outputs.additional_info }})\n" >> trimmed_comment.md
+  #     - name: Build apply report
+  #       run: |
+  #         python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -thash ${{ inputs.tot_hash }} -bstatus ${{ steps.apply-baseline.outputs.apply_baseline }} -tstatus ${{ steps.apply-tip-of-tree.outputs.apply_tot }} -o comment.md
+  #         head -c 65000 comment.md > trimmed_comment.md
+  #         if [ $(cat trimmed_comment.md | wc -l) -ne $(cat comment.md | wc -l) ]; then printf "\n\`\`\`\nComment text has been trimmed. Please check logs for the untrimmed comment." >> trimmed_comment.md; fi
+  #         printf "\n[Additional information](${{ needs.create-issue.outputs.additional_info }})\n" >> trimmed_comment.md
 
-      - name: Update apply report comment
-        uses: peter-evans/create-or-update-comment@v3
-        id: apply-comment
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          comment-id: ${{ needs.create-issue.outputs.apply_comment_id }}
-          body-path: riscv-gnu-toolchain/trimmed_comment.md
-          edit-mode: replace
+  #     - name: Update apply report comment
+  #       uses: peter-evans/create-or-update-comment@v3
+  #       id: apply-comment
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         comment-id: ${{ needs.create-issue.outputs.apply_comment_id }}
+  #         body-path: riscv-gnu-toolchain/trimmed_comment.md
+  #         edit-mode: replace
 
-      - name: Report patch failed to apply to tip of tree
-        if: ${{ steps.apply-baseline.outputs.apply_baseline == 'true' && steps.apply-tip-of-tree.outputs.apply_tot == 'false' }}
-        run: |
-          python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 patches/${{ inputs.patch_name }}) -desc 'Patch failed to apply to tip of tree.' -iid '${{ needs.create-issue.outputs.issue_num }}#issuecomment-${{ needs.create-issue.outputs.apply_comment_id }}' -state 'warning' -context 'apply-patch' -token "PLACEHOLDER"
-        continue-on-error: true
+  #     - name: Report patch failed to apply to tip of tree
+  #       if: ${{ steps.apply-baseline.outputs.apply_baseline == 'true' && steps.apply-tip-of-tree.outputs.apply_tot == 'false' }}
+  #       run: |
+  #         python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 patches/${{ inputs.patch_name }}) -desc 'Patch failed to apply to tip of tree.' -iid '${{ needs.create-issue.outputs.issue_num }}#issuecomment-${{ needs.create-issue.outputs.apply_comment_id }}' -state 'warning' -context 'apply-patch' -token "PLACEHOLDER"
+  #       continue-on-error: true
 
-      - name: Report patch applied to tip of tree successfully
-        if: ${{ steps.apply-tip-of-tree.outputs.apply_tot == 'true' }}
-        run: |
-          python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 patches/${{ inputs.patch_name }}) -desc 'Patch applied' -iid '${{ needs.create-issue.outputs.issue_num }}#issuecomment-${{ needs.create-issue.outputs.apply_comment_id }}' -state 'success' -context 'apply-patch' -token "PLACEHOLDER"
-        continue-on-error: true
+  #     - name: Report patch applied to tip of tree successfully
+  #       if: ${{ steps.apply-tip-of-tree.outputs.apply_tot == 'true' }}
+  #       run: |
+  #         python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 patches/${{ inputs.patch_name }}) -desc 'Patch applied' -iid '${{ needs.create-issue.outputs.issue_num }}#issuecomment-${{ needs.create-issue.outputs.apply_comment_id }}' -state 'success' -context 'apply-patch' -token "PLACEHOLDER"
+  #       continue-on-error: true
 
-      - name: Report patch failed to apply anywhere
-        if: ${{ steps.apply-baseline.outputs.apply_baseline == 'false' && steps.apply-tip-of-tree.outputs.apply_tot == 'false' }}
-        run: |
-          python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 patches/${{ inputs.patch_name }}) -desc 'Patch failed to apply' -iid '${{ needs.create-issue.outputs.issue_num }}#issuecomment-${{ needs.create-issue.outputs.apply_comment_id }}' -state 'fail' -context 'apply-patch' -token "PLACEHOLDER"
-        continue-on-error: true
+  #     - name: Report patch failed to apply anywhere
+  #       if: ${{ steps.apply-baseline.outputs.apply_baseline == 'false' && steps.apply-tip-of-tree.outputs.apply_tot == 'false' }}
+  #       run: |
+  #         python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 patches/${{ inputs.patch_name }}) -desc 'Patch failed to apply' -iid '${{ needs.create-issue.outputs.issue_num }}#issuecomment-${{ needs.create-issue.outputs.apply_comment_id }}' -state 'fail' -context 'apply-patch' -token "PLACEHOLDER"
+  #       continue-on-error: true
 
-      - name: Add apply-failure label if patch failed to apply anywhere
-        if: ${{ steps.apply-baseline.outputs.apply_baseline == 'false' && steps.apply-tip-of-tree.outputs.apply_tot == 'false' }}
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.addLabels({
-              issue_number: ${{ needs.create-issue.outputs.issue_num }},
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ['apply-failure']
-            })
+  #     - name: Add apply-failure label if patch failed to apply anywhere
+  #       if: ${{ steps.apply-baseline.outputs.apply_baseline == 'false' && steps.apply-tip-of-tree.outputs.apply_tot == 'false' }}
+  #       uses: actions/github-script@v6
+  #       with:
+  #         script: |
+  #           github.rest.issues.addLabels({
+  #             issue_number: ${{ needs.create-issue.outputs.issue_num }},
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             labels: ['apply-failure']
+  #           })
 
-      - name: Output the hash after the patch has been applied
-        id: new-glibc-hash
-        if: ${{ steps.apply-baseline.outputs.apply_baseline == 'true' || steps.apply-tip-of-tree.outputs.apply_tot == 'true' }}
-        run: |
-          cd glibc
-          git reset --hard ${{ inputs.tot_hash }}
-          if [ "${{ steps.apply-baseline.outputs.apply_baseline }}" == "true" ]; then
-            git checkout ${{ inputs.baseline_hash }}
-          fi
-          git am ../patches/*.patch --whitespace=fix --3way --empty=drop
-          export PATCH_APPLIED_GCCHASH=$(git rev-parse HEAD)
-          echo $PATCH_APPLIED_GCCHASH
-          echo "patch_applied_glibchash=$PATCH_APPLIED_GCCHASH" >> $GITHUB_OUTPUT
+  #     - name: Output the hash after the patch has been applied
+  #       id: new-glibc-hash
+  #       if: ${{ steps.apply-baseline.outputs.apply_baseline == 'true' || steps.apply-tip-of-tree.outputs.apply_tot == 'true' }}
+  #       run: |
+  #         cd glibc
+  #         git reset --hard ${{ inputs.tot_hash }}
+  #         if [ "${{ steps.apply-baseline.outputs.apply_baseline }}" == "true" ]; then
+  #           git checkout ${{ inputs.baseline_hash }}
+  #         fi
+  #         git am ../patches/*.patch --whitespace=fix --3way --empty=drop
+  #         export PATCH_APPLIED_GCCHASH=$(git rev-parse HEAD)
+  #         echo $PATCH_APPLIED_GCCHASH
+  #         echo "patch_applied_glibchash=$PATCH_APPLIED_GCCHASH" >> $GITHUB_OUTPUT
 
-    outputs:
-      early_exit: ${{ steps.early-exit.outputs.early_exit }}
-      build_only: ${{ steps.build-only.outputs.build_only }}
-      patch_applied_glibchash: ${{ steps.new-glibc-hash.outputs.patch_applied_glibchash }}
+  #   outputs:
+  #     early_exit: ${{ steps.early-exit.outputs.early_exit }}
+  #     build_only: ${{ steps.build-only.outputs.build_only }}
+  #     patch_applied_glibchash: ${{ steps.new-glibc-hash.outputs.patch_applied_glibchash }}
 
   # build_many_glibcs:
   #   needs: [download_patches, create-issue, apply]
@@ -369,15 +354,15 @@ jobs:
   #     tot_hash: ${{ inputs.tot_hash }}
 
   build_test:
-    needs: [download_patches, create-issue, apply]
+    # needs: [download_patches, create-issue, apply]
+    needs: [download_patches, create-issue]
     if: ${{ needs.apply.outputs.early_exit != 'true' }}
     uses: ./.github/workflows/build-target.yaml
     with:
       patch_name: ${{ inputs.patch_name }}
       baseline_hash: ${{ inputs.baseline_hash }}
       build_only: ${{ needs.apply.outputs.build_only }}
-      patch_applied_glibchash: ${{ needs.apply.outputs.patch_applied_glibchash }}
-      tot_hash: ${{ inputs.tot_hash }}
       issue_num: ${{ needs.create-issue.outputs.issue_num }}
+      apply_comment_id: ${{ needs.create-issue.outputs.apply_comment_id }}
       additional_info: ${{ needs.create-issue.outputs.additional_info }}
     secrets: inherit

@@ -13,12 +13,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-      - name: Initialize riscv-gnu-toolchain
+      - name: Initialize glibc
         shell: bash
         working-directory: ./
         run: |
-          git submodule update --init riscv-gnu-toolchain
-          git submodule update --init glibc-cicd
+          git submodule update --init glibc
 
       - name: Remove unneeded frameworks to recover disk space
         shell: bash
@@ -60,12 +59,19 @@ runs:
           echo "-- After --"
           df -h
 
+      - name: Download qemu
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install -y qemu-system-misc qemu-user-static
+
+
       - name: Download python libraries
         shell: bash
         if: inputs.python_libs == 'true'
         run: |
           sudo apt update
-          sudo apt install -y libmariadb-dev libmariadb3
+          sudo apt install -y libmariadb-dev libmariadb3 qemu-system-misc qemu-user-static
           sudo apt remove python3-pip
           wget https://bootstrap.pypa.io/get-pip.py
           sudo python3 get-pip.py

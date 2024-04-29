@@ -30,10 +30,10 @@ on:
 
 jobs:
   fetch_patches:
-    runs-on: Ubuntu-20.04
+    runs-on: ubuntu-22.04
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
     steps:
       - name: Cleanup build folder
         working-directory: ./
@@ -45,10 +45,10 @@ jobs:
 
       - uses: actions/checkout@v3
 
-      - name: Clone riscv-gnu-toolchain
-        working-directory: ./
-        run: |
-          git submodule update --init riscv-gnu-toolchain
+      # - name: Clone riscv-gnu-toolchain
+      #   working-directory: ./
+      #   run: |
+      #     git submodule update --init riscv-gnu-toolchain
 
       - name: Install dependencies
         run: |
@@ -110,7 +110,7 @@ jobs:
         with:
           name: patch_urls
           path: |
-            riscv-gnu-toolchain/patch_files.zip
+            ./patch_files.zip
           retention-days: 90
 
       - name: Upload patchworks metadata zip
@@ -119,7 +119,7 @@ jobs:
         with:
           name: patchworks_metadata_files
           path: |
-            riscv-gnu-toolchain/patchworks_metadata_files.zip
+            ./patchworks_metadata_files.zip
           retention-days: 90
 
     outputs:
@@ -131,10 +131,10 @@ jobs:
     uses: ./.github/workflows/init-submodules.yaml
     with:
       baseline_hash: ${{ inputs.baseline_glibc_hash }}
-      tot_hash: ${{ inputs.tip_of_tree_hash }}
 
   patch_matrix:
     needs: [fetch_patches, init-submodules]
+    if: ${{ needs.fetch_patches.outputs.list_of_patch_names != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -145,5 +145,4 @@ jobs:
     with:
       patch_name: ${{ matrix.patch_name }}
       baseline_hash: ${{ needs.init-submodules.outputs.baseline_hash }}
-      tot_hash: ${{ needs.init-submodules.outputs.tot_hash }}
     secrets: inherit

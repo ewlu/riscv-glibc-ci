@@ -12,13 +12,10 @@ on:
       build_only:
         required: true
         type: string
-      patch_applied_glibchash:
-        required: true
-        type: string
-      tot_hash:
-        required: true
-        type: string
       issue_num:
+        required: true
+        type: string
+      apply_comment_id:
         required: true
         type: string
       additional_info:
@@ -26,11 +23,23 @@ on:
         type: string
 
 jobs:
+  make-rootfs-applied:
+    uses: ./.github/workflows/build-rootfs.yaml
+    with:
+      patch_name: ${{ inputs.patch_name }}
+      baseline_hash: ${{ inputs.baseline_hash }}
+      target_type: 'applied'
+      apply_comment_id: ${{ inputs.apply_comment_id }}
+      additional_info: ${{ inputs.additional_info }}
+    secrets: inherit
+
   initialize-comments:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    needs: [make-rootfs-applied]
+    if: ${{ needs.make-rootfs-applied.outputs.early_exit != 'true' }}
     defaults:
       run:
-        working-directory: riscv-gnu-toolchain
+        working-directory: ./
     steps:
       - uses: actions/checkout@v3
 
@@ -43,7 +52,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.patch_name }}-downloaded-patches
-          path: ./riscv-gnu-toolchain
+          path: ./
 
       - name: Extract patches
         run: |
@@ -61,7 +70,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           issue-number: ${{ inputs.issue_num }}
-          body-path: riscv-gnu-toolchain/build_pending_comment.md
+          body-path: ./build_pending_comment.md
           edit-mode: replace
 
       - name: Create build pending comment
@@ -76,89 +85,70 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           issue-number: ${{ inputs.issue_num }}
-          body-path: riscv-gnu-toolchain/test_pending_comment.md
+          body-path: ./test_pending_comment.md
           edit-mode: replace
 
     outputs:
       build_glibc_comment_id: ${{ steps.build-comment.outputs.comment-id }}
       test_glibc_comment_id: ${{ steps.test-comment.outputs.comment-id }}
 
-  build-many-glibcs: 
-    needs: [initialize-comments]
-    uses: ./.github/workflows/build-glibcs.yaml
-    with:
-      patch_name: ${{ inputs.patch_name }}
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
-      issue_num: ${{ inputs.issue_num }}
-      build_comment_id: ${{ needs.initialize-comments.outputs.build_glibc_comment_id }}
-      run_on_self_hosted: false
-      tot_hash: ${{ inputs.tot_hash }}
-      additional_info: ${{ inputs.additional_info }}
-    secrets: inherit
+  # build-many-glibcs: 
+  #   needs: [initialize-comments]
+  #   uses: ./.github/workflows/build-glibcs.yaml
+  #   with:
+  #     patch_name: ${{ inputs.patch_name }}
+  #     baseline_hash: ${{ inputs.baseline_hash }}
+  #     patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
+  #     issue_num: ${{ inputs.issue_num }}
+  #     build_comment_id: ${{ needs.initialize-comments.outputs.build_glibc_comment_id }}
+  #     run_on_self_hosted: false
+  #     tot_hash: ${{ inputs.tot_hash }}
+  #     additional_info: ${{ inputs.additional_info }}
+  #   secrets: inherit
 
-  build-glibc-linux-baseline:
-    needs: [initialize-comments]
-    uses: ./.github/workflows/build-initial.yaml
-    with:
-      patch_name: 
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: 
-      issue_num: ${{ inputs.issue_num }}
-      additional_info: ${{ inputs.additional_info }}
-    secrets: inherit
-
-  build-glibc-linux-applied:
-    needs: [initialize-comments]
-    uses: ./.github/workflows/build-initial.yaml
-    with:
-      patch_name: ${{ inputs.patch_name }}
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
-      issue_num: ${{ inputs.issue_num }}
-      additional_info: ${{ inputs.additional_info }}
-    secrets: inherit
 
   test-glibc-linux-baseline:
-    needs: [initialize-comments,build-glibc-linux-baseline]
+    # needs: [initialize-comments,make-rootfs-baseline]
+    needs: [initialize-comments]
     uses: ./.github/workflows/test-regression.yaml
     strategy:
       fail-fast: false
       matrix:
         target:
           [
-            rv32gcv-ilp32d,
-            rv64gcv-lp64d,
+            # rv32gc-ilp32d,
+            rv64gc-lp64d,
           ]
     with:
       patch_name: 
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: 
+      glibchash: ${{ inputs.baseline_hash }}
       target: ${{ matrix.target }}
       issue_num: ${{ inputs.issue_num }}
       test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
       additional_info: ${{ inputs.additional_info }}
+      target_type: 'baseline'
     secrets: inherit
 
   test-glibc-linux-applied:
-    needs: [initialize-comments,build-glibc-linux-applied]
+    needs: [initialize-comments,make-rootfs-applied]
+    # needs: [initialize-comments]
     uses: ./.github/workflows/test-regression.yaml
     strategy:
       fail-fast: false
       matrix:
         target:
           [
-            rv32gcv-ilp32d,
-            rv64gcv-lp64d,
+            # rv32gc-ilp32d,
+            rv64gc-lp64d,
           ]
     with:
       patch_name: ${{ inputs.patch_name }}
-      baseline_hash: ${{ inputs.baseline_hash }}
-      patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
+      glibchash: ${{ needs.make-rootfs-applied.outputs.patch_applied_glibchash }}
       target: ${{ matrix.target }}
       issue_num: ${{ inputs.issue_num }}
       test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
       additional_info: ${{ inputs.additional_info }}
+      target_type: 'applied'
     secrets: inherit
 
 
@@ -249,7 +239,7 @@ jobs:
 
   # summarize:
   #   if: "!cancelled()" # Generate github issues even when some (or all) targets fail to build
-  #   needs: [initialize-comments, creg, cmreg, creg-sh]
+  #   needs: [make-rootfs-applied,initialize-comments,test-glibc-linux-applied,test-glibc-linux-baseline]
   #   permissions:
   #     issues: write
   #   uses: ./.github/workflows/generate-precommit-summary.yaml

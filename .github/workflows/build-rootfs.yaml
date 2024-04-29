@@ -1,0 +1,123 @@
+name: Build-Rootfs
+
+on:
+  workflow_call:
+    inputs:
+      patch_name:
+        required: false
+        type: string
+      baseline_hash:
+        required: true
+        type: string
+      target_type:
+        required: true
+        type: string
+      apply_comment_id:
+        required: true
+        type: string
+      additional_info:
+        required: true
+        type: string
+    outputs:
+      early_exit: 
+        value: ${{ jobs.build-rootfs.outputs.early_exit }}
+      patch_applied_glibchash: 
+        value: ${{ jobs.build-rootfs.outputs.patch_applied_glibchash }}
+
+jobs:
+  build-rootfs:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: ./
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup env
+        uses: ./.github/actions/common/setup-env
+        with:
+          free_up_space: true
+
+      - name: Check baseline
+        id: not-baseline
+        if: ${{ inputs.patch_name == '' }}
+        run: |
+          echo "not_baseline=true" >> $GITHUB_OUTPUT
+
+      - name: Download patches artifact
+        uses: actions/download-artifact@v3
+        if: ${{ inputs.patch_name != '' }}
+        with:
+          name: ${{ inputs.patch_name }}-downloaded-patches
+          path: ./
+
+      - name: Extract patches
+        if: ${{ inputs.patch_name != '' }}
+        working-directory: ./
+        run: |
+          unzip ${{ inputs.patch_name }}-downloaded-patches.zip
+
+      - name: Make rootfs
+        run: |
+          if [[ "${{ inputs.patch_name }}" != "" ]]; then
+            export PATCH_DIR=$(pwd)/patches/
+          fi
+          export BASELINE_HASH=${{ inputs.baseline_hash }}
+
+          # install dependencies
+          sudo apt update
+          # sudo apt upgrade
+          wget https://launchpad.net/ubuntu/+archive/primary/+files/mmdebstrap_1.4.3-4_all.deb 
+          sudo apt install ./mmdebstrap_1.4.3-4_all.deb
+          sudo apt install genext2fs qemu-system-riscv64
+
+          mkdir hash_output
+          chmod 777 hash_output
+          f=/home/runner/work/riscv-glibc-ci/riscv-glibc-ci
+          while [[ $f != /home ]]; do chmod +rx "$f"; f=$(dirname "$f"); done;
+
+          # To locate current directory in mmdebstrap hooks
+          export HASH_DIR=$(pwd)/hash_output
+
+          # create rootfs
+          ./mkrootfs_rv64_ubuntu.sh filesystem.ext2
+          e2fsck -f -y filesystem.ext2
+
+
+      - name: Check patch applied
+        if: ${{ inputs.patch_name != '' }}
+        id: early-exit
+        run: |
+          if [[ $(cat ./hash_output/apply.log | wc -l) != 0 ]];
+          then 
+            python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -bstatus "false" -o comment.md
+            echo "early_exit=true" >> $GITHUB_OUTPUT
+          else
+            python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -bstatus "true" -o comment.md
+            echo "early_exit=false" >> $GITHUB_OUTPUT
+          fi
+          head -c 65000 comment.md > trimmed_comment.md
+          if [ $(cat trimmed_comment.md | wc -l) -ne $(cat comment.md | wc -l) ]; then printf "\n\`\`\`\nComment text has been trimmed. Please check logs for the untrimmed comment." >> trimmed_comment.md; fi
+          printf "\n[Additional information](${{ inputs.additional_info }})\n" >> trimmed_comment.md
+
+      - name: Get applied hash
+        id: app-hash
+        if: ${{ steps.early-exit.outputs.early_exit != 'true' }}
+        run: |
+          PATCH_APPLIED_HASH=$(cat ./hash_output/applied_hash.txt)
+          echo "patch_applied_glibchash=$PATCH_APPLIED_HASH" >> $GITHUB_OUTPUT
+
+      - name: Update apply report comment
+        uses: peter-evans/create-or-update-comment@v3
+        if: ${{ inputs.patch_name != '' && inputs.target == 'rv64gc-lp64d' }}
+        id: apply-comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          comment-id: ${{ inputs.apply_comment_id }}
+          body-path: ./trimmed_comment.md
+          edit-mode: replace
+
+    outputs:
+      early_exit: ${{ steps.early-exit.outputs.early_exit }}
+      patch_applied_glibchash: ${{ steps.app-hash.outputs.patch_applied_glibchash }}
