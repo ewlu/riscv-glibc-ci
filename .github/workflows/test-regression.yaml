@@ -81,8 +81,8 @@ jobs:
           sudo apt update
           # sudo apt upgrade
           wget https://launchpad.net/ubuntu/+archive/primary/+files/mmdebstrap_1.4.3-4_all.deb 
-          sudo apt install ./mmdebstrap_1.4.3-4_all.deb
-          sudo apt install genext2fs qemu-system-riscv64
+          sudo apt install ./mmdebstrap_1.4.3-4_all.deb -y
+          sudo apt install genext2fs qemu-system-riscv64 -y
 
           mkdir hash_output
           chmod 777 hash_output
@@ -197,6 +197,7 @@ jobs:
         run: |
           mkdir mountdir
           mkdir logs
+          mkdir debug
           sudo mount ./filesystem.ext2 mountdir
           for file in $(sudo find mountdir/home/tester/tests/build -name "*.log"); do
             sudo cp $file ./logs
@@ -204,11 +205,29 @@ jobs:
           for file in $(sudo find mountdir/home/tester/tests/build -name "*.status"); do
             sudo cp $file ./logs
           done
+          for file in $(sudo find mountdir/home/tester/tests/build -name "*.out"); do
+            sudo cp --parents $file ./debug
+          done
+          for file in $(sudo find mountdir/home/tester/tests/build -name "*.sum"); do
+            sudo cp --parents $file ./debug
+          done
+          for file in $(sudo find mountdir/home/tester/tests/build -name "*.test-result"); do
+            sudo cp --parents $file ./debug
+          done
           sudo umount mountdir
           cp ./logs/*-report.log ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
+          zip -r ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-results.zip ./debug
           ls
 
-      - name: Upload results artifact
+      - name: Upload results artifacts (out/sum/test-result files)
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-results
+          path: |
+            ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-results.zip
+          retention-days: 90
+
+      - name: Upload report artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
