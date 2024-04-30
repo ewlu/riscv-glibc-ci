@@ -8,7 +8,7 @@ set -eo pipefail
 d=$(dirname "${BASH_SOURCE[0]}")
 
 mkdir -p $1/src
-git clone https://github.com/bminor/glibc.git $1/home/tester/tests/glibc
+git clone https://sourceware.org/git/glibc.git $1/home/tester/tests/glibc
 cp $d/../run_glibc.sh "$1/home/tester/tests/"
 mkdir -p $1/home/tester/tests/build
 cp $d/../print_test_results.sh "$1/home/tester/tests/build"
