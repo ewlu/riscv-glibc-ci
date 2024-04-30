@@ -200,22 +200,26 @@ jobs:
           mkdir logs
           mkdir debug
           sudo mount ./filesystem.ext2 mountdir
-          for file in $(sudo find mountdir/home/tester/tests/build -name "*.log"); do
-            sudo cp $file ./logs
+          sudo cp -r mountdir/home/tester/tests/build .
+          for file in $(find ./build -name "*.log"); do
+            cp $file ./logs
           done
-          for file in $(sudo find mountdir/home/tester/tests/build -name "*.status"); do
-            sudo cp $file ./logs
+          for file in $(find ./build -name "*.status"); do
+            cp $file ./logs
           done
-          for file in $(sudo find mountdir/home/tester/tests/build -name "*.out"); do
-            sudo cp --parents $file ./debug
+          cd build
+          for file in $(find ./ -name "*.out"); do
+            cp --parents $file ../debug
           done
-          for file in $(sudo find mountdir/home/tester/tests/build -name "*.sum"); do
-            sudo cp --parents $file ./debug
+          for file in $(find ./ -name "*.sum"); do
+            cp --parents $file ../debug
           done
-          for file in $(sudo find mountdir/home/tester/tests/build -name "*.test-result"); do
-            sudo cp --parents $file ./debug
+          for file in $(find ./ -name "*.test-result"); do
+            cp --parents $file ../debug
           done
+          cd ..
           sudo umount mountdir
+          rm -rf build
           cp ./logs/*-report.log ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
           zip -r ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-results.zip ./debug
           ls
