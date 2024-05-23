@@ -27,7 +27,7 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: [self-hosted, build]
     environment: production
     defaults:
       run:
@@ -158,7 +158,7 @@ jobs:
 
 
   test:
-    runs-on: self-hosted
+    runs-on: [self-hosted, build]
     environment: production
     needs: [build]
     if: ${{ needs.build.outputs.build_passed == 'true' }}
