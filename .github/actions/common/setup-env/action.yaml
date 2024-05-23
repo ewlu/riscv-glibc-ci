@@ -59,22 +59,22 @@ runs:
           echo "-- After --"
           df -h
 
-      - name: Download qemu
-        shell: bash
-        run: |
-          sudo apt update
-          sudo apt install -y qemu-system-misc qemu-user-static
-
-
-      - name: Download python libraries
-        shell: bash
-        if: inputs.python_libs == 'true'
-        run: |
-          sudo apt update
-          sudo apt install -y libmariadb-dev libmariadb3 qemu-system-misc qemu-user-static
-          sudo apt remove python3-pip
-          wget https://bootstrap.pypa.io/get-pip.py
-          sudo python3 get-pip.py
-          pip install -U pyopenssl cryptography mariadb==1.0.11 gnupg pygit2 requests
-
-       
+      # - name: Download qemu
+      #   shell: bash
+      #   run: |
+      #     sudo apt update
+      #     sudo apt install -y qemu-system-misc qemu-user-static
+      #
+      #
+      # - name: Download python libraries
+      #   shell: bash
+      #   if: inputs.python_libs == 'true'
+      #   run: |
+      #     sudo apt update
+      #     sudo apt install -y libmariadb-dev libmariadb3 qemu-system-misc qemu-user-static
+      #     sudo apt remove python3-pip
+      #     wget https://bootstrap.pypa.io/get-pip.py
+      #     sudo python3 get-pip.py
+      #     pip install -U pyopenssl cryptography mariadb==1.0.11 gnupg pygit2 requests
+      #
+      #  

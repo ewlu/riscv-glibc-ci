@@ -77,12 +77,12 @@ jobs:
           export BASELINE_HASH=${{ inputs.baseline_hash }}
 
 
-          # install dependencies
-          sudo apt update
-          # sudo apt upgrade
-          wget https://launchpad.net/ubuntu/+archive/primary/+files/mmdebstrap_1.4.3-4_all.deb 
-          sudo apt install ./mmdebstrap_1.4.3-4_all.deb -y
-          sudo apt install genext2fs qemu-system-riscv64 -y
+          # # install dependencies
+          # sudo apt update
+          # # sudo apt upgrade
+          # wget https://launchpad.net/ubuntu/+archive/primary/+files/mmdebstrap_1.4.3-4_all.deb 
+          # sudo apt install ./mmdebstrap_1.4.3-4_all.deb -y
+          # sudo apt install genext2fs qemu-system-riscv64 -y
 
           mkdir hash_output
           chmod 777 hash_output
