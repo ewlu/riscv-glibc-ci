@@ -157,7 +157,7 @@ jobs:
       - name: Effective tip-of-tree-hash
         id: etot-hash
         run:
-          if [[ ${{ steps.tot-hash.outputs.tot_hash == '' }} ]];
+          if [[ ${{ steps.tot-hash.outputs.tot_hash }} == '' ]];
           then
             echo "tot_hash=${{ steps.tot-retry.outputs.tot_hash }}" >> $GITHUB_OUTPUT
           else
