@@ -59,7 +59,7 @@ def generate_report(patch_name: str, bhash: str, bstatus: str):
         result += "```\n"
         result += "## Output\n"
         result += "```\n"
-        with open("hash_output/apply.log", "r") as f:
+        with open("./out", "r") as f:
             result += f.read()
         result += "```"
 #     elif bstatus == "Failed" and tstatus == "Applied":

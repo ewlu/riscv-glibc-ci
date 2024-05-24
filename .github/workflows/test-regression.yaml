@@ -53,20 +53,6 @@ jobs:
         run: |
           unzip ${{ inputs.patch_name }}-downloaded-patches.zip
 
-
-      # - name: Download rootfs
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-rootfs-init
-      #     path: ./
-      #
-      # - name: Extract rootfs
-      #   working-directory: ./
-      #   run: |
-      #     unzip ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-rootfs.zip
-      #     rm ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-rootfs.zip
-      #     resize2fs filesystem.ext2 6G
-
       - name: Make rootfs
         run: |
           if [[ "${{ inputs.patch_name }}" != "" ]]; then
@@ -75,14 +61,6 @@ jobs:
           export MARCH=$(echo ${{ inputs.target }} | cut -d '-' -f 1)
           export MABI=$(echo ${{ inputs.target }} | cut -d '-' -f 2)
           export BASELINE_HASH=${{ inputs.baseline_hash }}
-
-
-          # # install dependencies
-          # sudo apt update
-          # # sudo apt upgrade
-          # wget https://launchpad.net/ubuntu/+archive/primary/+files/mmdebstrap_1.4.3-4_all.deb 
-          # sudo apt install ./mmdebstrap_1.4.3-4_all.deb -y
-          # sudo apt install genext2fs qemu-system-riscv64 -y
 
           mkdir hash_output
           chmod 777 hash_output
@@ -155,7 +133,6 @@ jobs:
     outputs:
       patch_applied_glibchash: ${{ inputs.glibchash }}
       build_passed: ${{ steps.build-pass.outputs.build_passed }}
-
 
   test:
     runs-on: [self-hosted, build]
@@ -260,50 +237,4 @@ jobs:
           path: |
             ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-logs.zip
           retention-days: 90
-
-      # - name: Check baseline
-      #   id: not-baseline
-      #   if: ${{ inputs.patch_name == '' }} && ${{ inputs.patch_applied_glibchash == '' }}
-      #   run: |
-      #     echo "not_baseline=true" >> $GITHUB_OUTPUT
-
-      # - name: Effective hash
-      #   id: ehash
-      #   run: |
-      #     if [ '${{ inputs.patch_applied_glibchash }}' == '' ]; then
-      #       echo "ehash=${{inputs.baseline_hash}}" >> $GITHUB_OUTPUT
-      #     else
-      #       echo "ehash=${{inputs.applied_glibc_hash}}" >> $GITHUB_OUTPUT
-      #     fi
-
-      # - name: Extract and apply patches
-      #   uses: ./.github/actions/extract-apply-patches-trunk-or-baseline
-      #   if: ${{ steps.not-baseline.outputs.not_baseline == 'true' }}
-      #   with:
-      #     patch_name: ${{ inputs.patch_name }}
-      #     baseline_hash: ${{ inputs.baseline_hash }}
-      #     build_only: ${{ inputs.build_only }}
-      #     tot_hash: ${{ inputs.tot_hash }}
-
-      # - name: Restore Stage2 Artifacts
-      #   uses: ./.github/actions/restore-stage-2
-      #   with:
-      #     mode: ${{ inputs.mode }}
-      #     target: ${{ inputs.target }}
-      #     glibchash: ${{ inputs.patch_applied_glibchash }}
-      #     multilib: ${{ inputs.multilib }}
-
-      # - name: Replace allowlist
-      #   run: |
-      #     rm -rf test/
-      #     cp -r ../test/ .
-
-      # - name: Run Testsuite
-      #   uses: ./.github/actions/common/run-testsuite
-      #   with:
-      #     mode: ${{ inputs.mode }}
-      #     target: ${{ inputs.target }}
-      #     glibchash: ${{ inputs.patch_applied_glibchash }}
-      #     multilib: ${{ inputs.multilib }}
-
 

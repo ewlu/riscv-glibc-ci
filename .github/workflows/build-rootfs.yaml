@@ -38,6 +38,12 @@ jobs:
         with:
           free_up_space: true
 
+      - name: Download qemu
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install -y qemu-system-misc qemu-user-static
+
       - name: Check baseline
         id: not-baseline
         if: ${{ inputs.patch_name == '' }}
@@ -64,12 +70,12 @@ jobs:
           fi
           export BASELINE_HASH=${{ inputs.baseline_hash }}
 
-          # install dependencies
-          sudo apt update
-          # sudo apt upgrade
-          wget https://launchpad.net/ubuntu/+archive/primary/+files/mmdebstrap_1.4.3-4_all.deb 
-          sudo apt install ./mmdebstrap_1.4.3-4_all.deb -y
-          sudo apt install genext2fs qemu-system-riscv64 -y
+          # # install dependencies
+          # sudo apt update
+          # # sudo apt upgrade
+          # wget https://launchpad.net/ubuntu/+archive/primary/+files/mmdebstrap_1.4.3-4_all.deb 
+          # sudo apt install ./mmdebstrap_1.4.3-4_all.deb -y
+          # sudo apt install genext2fs qemu-system-riscv64 -y
 
           mkdir hash_output
           chmod 777 hash_output
@@ -109,7 +115,7 @@ jobs:
 
       - name: Update apply report comment
         uses: peter-evans/create-or-update-comment@v3
-        if: ${{ inputs.patch_name != '' && inputs.target == 'rv64gc-lp64d' }}
+        if: ${{ inputs.patch_name != '' }}
         id: apply-comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
