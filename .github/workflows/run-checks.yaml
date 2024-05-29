@@ -227,10 +227,10 @@ jobs:
         run: |
           if [[ $(cat ./out | wc -l) != 0 ]];
           then 
-            python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -bstatus "false" -o comment.md
+            python ../scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -bstatus "false" -o comment.md
             echo "early_exit=true" >> $GITHUB_OUTPUT
           else
-            python scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -bstatus "true" -o comment.md
+            python ../scripts/generate_apply_report.py -patch ${{ inputs.patch_name }} -bhash ${{ inputs.baseline_hash }} -bstatus "true" -o comment.md
             echo "early_exit=false" >> $GITHUB_OUTPUT
           fi
           head -c 65000 comment.md > trimmed_comment.md
