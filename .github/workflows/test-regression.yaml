@@ -81,6 +81,7 @@ jobs:
         run: |
           qemu-system-riscv64 -nographic -m 10G -machine virt \
           -kernel ./Image \
+          -smp 8 \
           -append "root=/dev/vda rw console=ttyS0" \
           -drive file=filesystem.ext2,format=raw,id=hd0 \
           -device virtio-blk-device,drive=hd0 \
@@ -167,6 +168,7 @@ jobs:
         run: |
           qemu-system-riscv64 -nographic -m 10G -machine virt \
           -kernel ./Image \
+          -smp 8 \
           -append "root=/dev/vda rw console=ttyS0" \
           -drive file=filesystem.ext2,format=raw,id=hd0 \
           -device virtio-blk-device,drive=hd0 \
