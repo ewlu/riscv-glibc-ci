@@ -200,7 +200,7 @@ jobs:
           done
           cd ..
           sudo umount mountdir
-          rm -rf build
+          sudo rm -rf build
           cp ./logs/*-report.log ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
           zip -r ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-results.zip ./debug
           ls
