@@ -210,6 +210,8 @@ jobs:
           git checkout master
           git pull
           git checkout ${{ inputs.baseline_hash }}
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
           git am ./patches/*.patch --whitespace=fix -q --3way --empty=drop &> out || true
           cat out
           if [[ $(cat out | wc -l) != 0 ]]; then
