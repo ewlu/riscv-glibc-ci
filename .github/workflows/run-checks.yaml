@@ -211,7 +211,7 @@ jobs:
           git pull
           git checkout ${{ inputs.baseline_hash }}
           git am ./patches/*.patch --whitespace=fix -q --3way --empty=drop &> out || true
-          cat out_tot
+          cat out
           if [[ $(cat out | wc -l) != 0 ]]; then
             git am --show-current-patch=diff
             echo "Failed to apply patch cleanly to tip of tree"
