@@ -202,6 +202,8 @@ jobs:
           sudo umount mountdir
           sudo rm -rf build
           cp ./logs/*-report.log ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
+          PARSE_REPORT_TESTS="./scripts/testsuite-filter glibc glibc test/allowlist `find ./debug -name tests.sum |paste -sd "," -` ${{ inputs.target }}"
+          $PARSE_REPORT_TESTS | tee ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-testsuite-filter-report.log
           zip -r ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-results.zip ./debug
           ls
 
@@ -219,6 +221,14 @@ jobs:
           name: ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
           path: |
             ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
+          retention-days: 90
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-testsuite-filter-report.log
+          path: |
+            ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-testsuite-filter-report.log
           retention-days: 90
 
       - name: Zip files
