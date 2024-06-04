@@ -266,8 +266,6 @@ jobs:
         id: new-glibc-hash
         if: ${{ steps.apply-baseline.outputs.apply_baseline == 'true' }}
         run: |
-          git checkout ${{ inputs.baseline_hash }}
-          git am ../patches/*.patch --whitespace=fix --3way --empty=drop
           export PATCH_APPLIED_GLIBCHASH=$(git rev-parse HEAD)
           echo $PATCH_APPLIED_GLIBCHASH
           echo "patch_applied_glibchash=$PATCH_APPLIED_GLIBCHASH" >> $GITHUB_OUTPUT
