@@ -149,8 +149,10 @@ def read_sum(sum_files: List[str]):
             scan_variations = False
             unexpected_result: Dict[str, List[str]] = dict()
             tool = os.path.basename(sum_file).split(".")[0]
+            gcc_tools = ["gcc", "g++", "gfortran"]
 
-            if tool == "glibc":
+            if tool not in gcc_tools:
+                tool = "glibc"
                 current_target = "glibc"
                 unexpected_result[current_target] = list()
 
