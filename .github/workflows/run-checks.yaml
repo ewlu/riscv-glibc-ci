@@ -394,20 +394,18 @@ jobs:
     secrets: inherit
 
 
-  # summarize:
-  #   if: "!cancelled()" # Generate github issues even when some (or all) targets fail to build
-  #   needs: [apply,initialize-comments,test-glibc-linux-applied,test-glibc-linux-baseline]
-  #   permissions:
-  #     issues: write
-  #   uses: ./.github/workflows/generate-precommit-summary.yaml
-  #   with:
-  #     patch_name: ${{ inputs.patch_name }}
-  #     baseline_hash: ${{ inputs.baseline_hash }}
-  #     patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
-  #     build_only: ${{ inputs.build_only }}
-  #     tot_hash: ${{ inputs.tot_hash }}
-  #     issue_num: ${{ needs.create-issue.outputs.issue_num }}
-  #     build_comment_id: ${{ needs.initialize-comments.outputs.build_comment_id }}
-  #     test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
-  #     additional_info: ${{ needs.create-issue.outputs.additional_info }}
-  #   secrets: inherit
+  summarize:
+    if: "!cancelled()" # Generate github issues even when some (or all) targets fail to build
+    needs: [apply,initialize-comments,test-glibc-linux-applied,test-glibc-linux-baseline]
+    permissions:
+      issues: write
+    uses: ./.github/workflows/generate-precommit-summary.yaml
+    with:
+      patch_name: ${{ inputs.patch_name }}
+      baseline_hash: ${{ inputs.baseline_hash }}
+      patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
+      issue_num: ${{ needs.create-issue.outputs.issue_num }}
+      build_comment_id: ${{ needs.initialize-comments.outputs.build_comment_id }}
+      test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
+      additional_info: ${{ needs.create-issue.outputs.additional_info }}
+    secrets: inherit
