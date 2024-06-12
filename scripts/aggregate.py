@@ -31,9 +31,9 @@ def get_additional_failures(file_name: str, failure_name: str, seen_failures: Se
 
 def build_summary(failures: Dict[str, List[str]], failure_name: str):
     """ Builds table in summary section """
-    tools = ("gcc", "g++", "gfortran")
-    result = f"|{failure_name}|{tools[0]}|{tools[1]}|{tools[2]}|Previous Hash|\n"
-    result += "|---|---|---|---|---|\n"
+    tool = "glibc"
+    result = f"|{failure_name}|{tool}|Previous Hash|\n"
+    result += "|---|---|---|\n"
     result += f"{''.join(sorted(failures[failure_name.split(' ')[0]]))}"
     result += "\n"
     return result
@@ -178,13 +178,8 @@ def aggregate_summary(failures: Dict[str, List[str]], file_name: str):
                 continue
             if line != "\n" and "---" not in line:
                 cells = line.split("|")
-                if "linux" in file_name:
-                    cells[1] = "linux: " + cells[1]
-                else:
-                    cells[1] = "newlib: " + cells[1]
 
                 # Apply nicknames
-
                 cells[1] = cells[1].replace("gc_zba_zbb_zbc_zbs_zfa", " Bitmanip")
                 cells[1] = cells[1].replace("gc_zba_zbb_zbc_zbs", " Bitmanip")
                 cells[1] = cells[1].replace("gcv_zvbb_zvbc_zvkg_zvkn_zvknc_zvkned_zvkng_zvknha_zvknhb_zvks_zvksc_zvksed_zvksg_zvksh_zvkt", " Vector Crypto")
