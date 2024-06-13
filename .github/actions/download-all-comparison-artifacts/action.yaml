@@ -1,7 +1,9 @@
 name: "Download All Target Comparison Artifacts"
 description: "Downloads all the artifacts for all targets needed for run comparison"
 inputs:
-  glibchash:
+  applied_glibchash:
+    required: true
+  baseline_glibchash:
     required: true
   token:
     required: true
@@ -16,8 +18,16 @@ runs:
     - name: Download rv64gc
       uses: ./.github/actions/common/download-comparison-artifacts
       with:
-        report-artifact-name: applied-rv64gc-lp64d-${{ inputs.glibchash }}-testsuite-filter-report.log
-        binary-artifact-name: applied-rv64gc-lp64d-${{ inputs.glibchash }}-rootfs-test
+        report-artifact-name: applied-rv64gc-lp64d-${{ inputs.applied_glibchash }}-testsuite-filter-report.log
+        binary-artifact-name: applied-rv64gc-lp64d-${{ inputs.applied_glibchash }}-rootfs-test
+        github-token: ${{ inputs.token }}
+        repo: ${{ inputs.repo }}
+
+    - name: Download rv64gcv
+      uses: ./.github/actions/common/download-comparison-artifacts
+      with:
+        report-artifact-name: applied-rv64gcv-lp64d-${{ inputs.applied_glibchash }}-testsuite-filter-report.log
+        binary-artifact-name: applied-rv64gcv-lp64d-${{ inputs.applied_glibchash }}-rootfs-test
         github-token: ${{ inputs.token }}
         repo: ${{ inputs.repo }}
 
@@ -26,8 +36,16 @@ runs:
     - name: Download rv64gc
       uses: ./.github/actions/common/download-comparison-artifacts
       with:
-        report-artifact-name: baseline-rv64gc-lp64d-${{ inputs.glibchash }}-testsuite-filter-report.log
-        binary-artifact-name: baseline-rv64gc-lp64d-${{ inputs.glibchash }}-rootfs-test
+        report-artifact-name: baseline-rv64gc-lp64d-${{ inputs.baseline_glibchash }}-testsuite-filter-report.log
+        binary-artifact-name: baseline-rv64gc-lp64d-${{ inputs.baseline_glibchash }}-rootfs-test
+        github-token: ${{ inputs.token }}
+        repo: ${{ inputs.repo }}
+
+    - name: Download rv64gcv
+      uses: ./.github/actions/common/download-comparison-artifacts
+      with:
+        report-artifact-name: baseline-rv64gcv-lp64d-${{ inputs.baseline_glibchash }}-testsuite-filter-report.log
+        binary-artifact-name: baseline-rv64gcv-lp64d-${{ inputs.baseline_glibchash }}-rootfs-test
         github-token: ${{ inputs.token }}
         repo: ${{ inputs.repo }}
 

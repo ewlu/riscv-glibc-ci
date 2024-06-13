@@ -126,7 +126,8 @@ jobs:
       - name: Download All targets
         uses: ./.github/actions/download-all-comparison-artifacts
         with:
-          glibchash: ${{ inputs.patch_applied_glibchash }}
+          applied_glibchash: ${{ inputs.patch_applied_glibchash }}
+          baseline_glibchash: ${{ inputs.baseline_hash }}
           token: ${{ secrets.GITHUB_TOKEN }}
           repo: 'ewlu/riscv-glibc-ci'
 
