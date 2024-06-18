@@ -35,7 +35,7 @@ def get_file_name_regex(file_name: str):
     return "-".join(new_name)
 
 def get_hash_from_file_name(file_name: str):
-    return file_name.split("-")[4]
+    return file_name.split("-")[3]
 
 def compare_all_artifacts(current_hash: str, current_hash_committed: bool):
     current_logs_dir = "./current_logs"
