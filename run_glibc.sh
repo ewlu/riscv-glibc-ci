@@ -23,7 +23,7 @@ then
   fi
   exit
 else
-  ../glibc/configure CC="gcc -march=$MARCH -mabi=$MABI " CXX="g++ -march=$MARCH -mabi=$MABI " --prefix=$(pwd) --build=riscv64-unknown-linux-gnu --with-timeout-factor=10 2>&1 | tee config.log
+  ../glibc/configure CC="gcc -march=$MARCH -mabi=$MABI " CXX="g++ -march=$MARCH -mabi=$MABI " --prefix=$(pwd) --build=riscv64-unknown-linux-gnu --with-timeout-factor=12 2>&1 | tee config.log
 
   if make -k -O -j $(nproc) 2>&1 | tee build.log
   then

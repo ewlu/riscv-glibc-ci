@@ -360,6 +360,7 @@ jobs:
           [
             # rv32gc-ilp32d,
             rv64gc-lp64d,
+            rv64gcv-lp64d,
           ]
     with:
       patch_name: 
@@ -382,32 +383,31 @@ jobs:
           [
             # rv32gc-ilp32d,
             rv64gc-lp64d,
+            rv64gcv-lp64d,
           ]
     with:
       patch_name: ${{ inputs.patch_name }}
       glibchash: ${{ needs.apply.outputs.patch_applied_glibchash }}
       target: ${{ matrix.target }}
       issue_num: ${{ needs.create-issue.outputs.issue_num }}
-      test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
+      test_comment_id: ${{ needs.initialize-comments.outputs.test_glibc_comment_id }}
       additional_info: ${{ needs.create-issue.outputs.additional_info }}
       target_type: 'applied'
     secrets: inherit
 
 
-  # summarize:
-  #   if: "!cancelled()" # Generate github issues even when some (or all) targets fail to build
-  #   needs: [apply,initialize-comments,test-glibc-linux-applied,test-glibc-linux-baseline]
-  #   permissions:
-  #     issues: write
-  #   uses: ./.github/workflows/generate-precommit-summary.yaml
-  #   with:
-  #     patch_name: ${{ inputs.patch_name }}
-  #     baseline_hash: ${{ inputs.baseline_hash }}
-  #     patch_applied_glibchash: ${{ inputs.patch_applied_glibchash }}
-  #     build_only: ${{ inputs.build_only }}
-  #     tot_hash: ${{ inputs.tot_hash }}
-  #     issue_num: ${{ needs.create-issue.outputs.issue_num }}
-  #     build_comment_id: ${{ needs.initialize-comments.outputs.build_comment_id }}
-  #     test_comment_id: ${{ needs.initialize-comments.outputs.test_comment_id }}
-  #     additional_info: ${{ needs.create-issue.outputs.additional_info }}
-  #   secrets: inherit
+  summarize:
+    if: "!cancelled()" # Generate github issues even when some (or all) targets fail to build
+    needs: [apply,create-issue, initialize-comments,test-glibc-linux-applied,test-glibc-linux-baseline]
+    permissions:
+      issues: write
+    uses: ./.github/workflows/generate-precommit-summary.yaml
+    with:
+      patch_name: ${{ inputs.patch_name }}
+      baseline_hash: ${{ inputs.baseline_hash }}
+      patch_applied_glibchash: ${{ needs.apply.outputs.patch_applied_glibchash }}
+      issue_num: ${{ needs.create-issue.outputs.issue_num }}
+      build_comment_id: ${{ needs.initialize-comments.outputs.build_glibc_comment_id }}
+      test_comment_id: ${{ needs.initialize-comments.outputs.test_glibc_comment_id }}
+      additional_info: ${{ needs.create-issue.outputs.additional_info }}
+    secrets: inherit

@@ -1,0 +1,312 @@
+name: Generate-Summary
+
+on:
+  workflow_call:
+    inputs:
+      patch_name:
+        required: true
+        type: string
+      baseline_hash:
+        required: true
+        type: string
+      patch_applied_glibchash:
+        required: true
+        type: string
+      issue_num:
+        required: true
+        type: string
+      build_comment_id:
+        required: true
+        type: string
+      test_comment_id:
+        required: true
+        type: string
+      additional_info:
+        required: true
+        type: string
+
+  workflow_dispatch:
+    branches:
+      - patchworks-ci
+    inputs:
+      baseline_hash:
+        description: 'glibc hash'
+        required: true
+      patch_applied_glibchash:
+        description: 'glibc hash of applied commit'
+        required: true
+      patch_name:
+        description: 'Patch name to regenerate summary for'
+        required: true
+
+jobs:
+  compare-artifacts:
+    if: ${{ always() }} # ensure comparison always runs even on error
+    runs-on: ubuntu-22.04
+    environment: production
+    defaults:
+      run:
+        working-directory: ./
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup env
+        uses: ./.github/actions/common/setup-env
+        with:
+          free_up_space: false
+
+      - name: Check workflow dispatch
+        id: dispatch
+        if: ${{ inputs.tot_hash == '' }} # tot_hash always set at apply tip of tree step in run-checks.yaml
+        run: |
+          echo "workflow_dispatch=true" >> $GITHUB_OUTPUT
+
+      - name: Create directories
+        run: |
+          mkdir current_logs
+          mkdir temp
+          mkdir summaries
+
+      - name: Bump pyopenssl and crypto
+        run: |
+          sudo apt remove python3-pip
+          wget https://bootstrap.pypa.io/get-pip.py
+          sudo python3 get-pip.py
+          pip install -U pyopenssl cryptography
+          pip install pygithub==1.59.1 requests
+
+      # Download all current workflow artifacts
+
+      - name: Print API usage info
+        run: |
+          curl \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/rate_limit
+
+      - name: Download All targets
+        uses: ./.github/actions/download-all-comparison-artifacts
+        with:
+          applied_glibchash: ${{ inputs.patch_applied_glibchash }}
+          baseline_glibchash: ${{ inputs.baseline_hash }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repo: 'ewlu/riscv-glibc-ci'
+
+      - name: Print API usage info
+        run: |
+          curl \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/rate_limit
+
+      - name: Extract artifacts
+        run: |
+          ls ./temp/
+          mkdir -p current_logs
+          mkdir -p previous_logs
+          for f in $(ls ./temp/*report.zip); do
+            START=$(echo $f | cut -d '-' -f 1)
+            if [ $START == 'baseline' ]; then
+              unzip $f -d ./previous_logs || true
+            else
+              unzip $f -d ./current_logs || true
+            fi
+          done
+          ls current_logs
+          ls previous_logs
+
+      - name: Move artifacts if necessary
+        run: |
+          mv current_logs/baseline* previous_logs
+        continue-on-error: true
+
+      - name: Compare artifacts
+        run: |
+          ls current_logs
+          ls previous_logs
+          python ./scripts/compare_all_artifacts.py -hash ${{ inputs.patch_applied_glibchash }}
+
+      - name: Search for build failures
+        run: |
+          python scripts/update_issue_status.py -token ${{ secrets.GITHUB_TOKEN }} -comment ${{ inputs.build_comment_id }} -repo ewlu/riscv-glibc-ci -failure -baseline ${{ inputs.baseline_hash }}
+          ls current_logs
+        continue-on-error: true
+
+      - name: Make artifact zips
+        run: |
+          zip -r summaries.zip summaries
+          zip -r current_logs.zip current_logs
+          zip -r previous_logs.zip previous_logs
+
+      - name: Upload compare summaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.patch_applied_glibchash }}-summaries
+          path: |
+            ./summaries.zip
+          retention-days: 90
+
+      - name: Upload current log failures
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.patch_applied_glibchash }}-current-logs
+          path: |
+            ./current_logs.zip
+          retention-days: 90
+
+      - name: Upload baseline results
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.patch_applied_glibchash }}-previous-logs
+          path: |
+            ./previous_logs.zip
+          retention-days: 90
+
+    outputs:
+      workflow_dispatch: ${{ steps.dispatch.outputs.workflow_dispatch }}
+
+  generate-issues:
+    if: ${{ always() }} # ensure generate issues always runs even on error
+    needs: [compare-artifacts]
+    runs-on: ubuntu-22.04
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: ./
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup env
+        uses: ./.github/actions/common/setup-env
+        with:
+          free_up_space: false
+
+      - name: Download summaries artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.patch_applied_glibchash }}-summaries
+          path: ./
+
+      - name: Download current logs artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.patch_applied_glibchash }}-current-logs
+          path: ./
+
+      - name: Download previous logs artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.patch_applied_glibchash }}-previous-logs
+          path: ./
+
+      - name: Download patches artifact
+        if: ${{ needs.compare-artifacts.outputs.workflow_dispatch == 'true' }}
+        run: |
+          sudo apt remove python3-pip
+          wget https://bootstrap.pypa.io/get-pip.py
+          sudo python3 get-pip.py
+          pip install -U pyopenssl cryptography pygithub==1.59.1 requests
+          mkdir temp
+          python ./scripts/download_artifact.py -name ${{ inputs.patch_name }}-downloaded-patches -repo ewlu/riscv-glibc-ci -token ${{ secrets.GITHUB_TOKEN }} -outdir ./temp -repo ewlu/riscv-glibc-ci
+          ls temp
+          unzip temp/${{ inputs.patch_name }}-downloaded-patches
+
+      - name: Download patches artifact
+        if: ${{ needs.compare-artifacts.outputs.workflow_dispatch != 'true' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.patch_name }}-downloaded-patches
+          path: ./
+
+      - name: Extract patches
+        run: |
+          unzip ${{ inputs.patch_name }}-downloaded-patches.zip
+
+      - name: Print API usage info
+        run: |
+          curl \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/rate_limit
+
+      - name: Aggregate information
+        run: |
+          unzip summaries.zip
+          unzip current_logs.zip
+          unzip previous_logs.zip
+          python ./scripts/aggregate.py \
+            -chash ${{ inputs.patch_applied_glibchash }} \
+            -patch ${{ inputs.patch_name }} \
+            -o temp_comment.md
+          echo "## Testsuite Status" > comment.md
+          tail -n+5 temp_comment.md >> comment.md
+          cat comment.md
+
+      - name: Print API usage info
+        run: |
+          curl \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/rate_limit
+
+      - name: Trim comment length # reduce the number of lines in final comment so github always creates comment
+        run: |
+          head -c 64000 comment.md > trimmed_comment.md
+          if [ $(cat trimmed_comment.md | wc -l) -ne $(cat comment.md | wc -l) ]; then printf "\n\`\`\`\nComment text has been trimmed. Please check logs for the untrimmed comment." >> trimmed_comment.md; fi
+          printf "\n[Additional information](${{ inputs.additional_info }})\n" >> trimmed_comment.md
+          cat trimmed_comment.md
+
+      - name: Update test report comment
+        uses: peter-evans/create-or-update-comment@v3
+        id: test-report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          comment-id: ${{ inputs.test_comment_id }}
+          body-path: ./trimmed_comment.md
+          edit-mode: replace
+
+      - name: Output issue labels
+        id: issue-labels
+        run: |
+          export LABELS=$(cat labels.txt)
+          echo "issue_labels=$LABELS" >> $GITHUB_OUTPUT
+
+      - name: Add New regressions Label to Issue
+        if: ${{ contains(steps.issue-labels.outputs.issue_labels, 'new-regressions') }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: ${{ inputs.issue_num }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['new-regressions']
+            })
+
+      - name: Add Resolved regressions Label to Issue
+        if: ${{ contains(steps.issue-labels.outputs.issue_labels, 'resolved-regressions') }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: ${{ inputs.issue_num }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['resolved-regressions']
+            })
+
+      # - name: Report Failure
+      #   if: ${{ contains(steps.issue-labels.outputs.issue_labels, 'build-failure') || contains(steps.issue-labels.outputs.issue_labels, 'testsuite-failure') || contains(steps.issue-labels.outputs.issue_labels, 'new-regressions') }}
+      #   id: report-failure
+      #   run: |
+      #     python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 ./patches/${{ inputs.patch_name }}) -desc 'Testing failed' -iid '${{ inputs.issue_num }}#issuecomment-${{ inputs.test_comment_id }}' -state 'fail' -context 'test' -token '${{ secrets.PATCHWORK_API }}'
+      #   continue-on-error: true
+
+      # - name: Report Success
+      #   if: ${{ steps.report-failure.outcome == 'skipped' }}
+      #   id: report-success
+      #   run: |
+      #     python scripts/post_check_to_patchworks.py -event ${{ github.event_name }} -repo ewlu/riscv-glibc-ci -pid $(tail -n 1 ./patches/${{ inputs.patch_name }}) -desc 'Testing passed' -iid '${{ inputs.issue_num }}#issuecomment-${{ inputs.test_comment_id }}' -state 'success' -context 'test' -token '${{ secrets.PATCHWORK_API }}'
+      #   continue-on-error: true
