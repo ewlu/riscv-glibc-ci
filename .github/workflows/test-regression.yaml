@@ -100,6 +100,7 @@ jobs:
           done
           # PATCH_APPLIED_GLIBCHASH=$(sudo cat mountdir/home/tester/tests/glibc/.git/refs/heads/master)
           sudo umount mountdir
+          sudo chown -R $USER logs
 
       - name: Zip files
         run: |
@@ -182,12 +183,16 @@ jobs:
           mkdir debug
           sudo mount ./filesystem.ext2 mountdir
           sudo cp -r mountdir/home/tester/tests/build .
+          sudo chown -R $USER build
+          ls build
           for file in $(find ./build -name "*.log"); do
             cp $file ./logs
           done
+          ls logs
           for file in $(find ./build -name "*.status"); do
             cp $file ./logs
           done
+          ls logs
           cd build
           for file in $(find ./ -name "*.out"); do
             cp --parents $file ../debug
@@ -201,6 +206,7 @@ jobs:
           cd ..
           sudo umount mountdir
           sudo rm -rf build
+          ls debug
           cp ./logs/*-report.log ./${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-report.log
           PARSE_REPORT_TESTS="./scripts/testsuite-filter glibc glibc test/allowlist `find ./debug -name tests.sum |paste -sd "," -` -t ${{ inputs.target }}-medlow"
           $PARSE_REPORT_TESTS | tee ${{ inputs.target_type }}-${{ inputs.target }}-${{ inputs.glibchash }}-testsuite-filter-report.log
